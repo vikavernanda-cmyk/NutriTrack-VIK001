@@ -292,6 +292,9 @@
   .settings-subtab.active { color: var(--accent2); border-bottom-color: var(--accent); font-weight: 600; }
 
 /* ── INVENTORY SORTABLE TABLE ── */
+  .inv-filter-row td { background: var(--surface2); padding: 0.3rem 0.4rem; border-bottom: 2px solid var(--border2); }
+  .inv-inline-select { width: 100%; font-size: 0.72rem; padding: 0.22rem 0.4rem; border-radius: 6px; border: 1px solid var(--border2); background: var(--surface); color: var(--text); font-family: inherit; cursor: pointer; }
+  .inv-inline-select:focus { border-color: var(--accent); outline: none; }
   .inv-th { cursor: pointer; user-select: none; white-space: nowrap; }
   .inv-th:hover { color: var(--accent2); }
   .sort-indicator { font-size: 0.65rem; margin-left: 0.2rem; opacity: 0.5; }
@@ -416,7 +419,7 @@
   <nav class="nav-tabs">
     <div class="nav-tab active" onclick="switchTab('dashboard')">📊 Dashboard</div>
     <div class="nav-tab" onclick="switchTab('inventory')">🥕 Inventory</div>
-    <div class="nav-tab" onclick="switchTab('ingredients-db')">📋 Ingredients DB</div>
+    <div class="nav-tab" onclick="switchTab('ingredients-db')">📋 Ingredients</div>
     <div class="nav-tab" onclick="switchTab('cooking')">🍳 Cooking Log</div>
     <div class="nav-tab" onclick="switchTab('mealplan')">📅 Meal Plan</div>
     <div class="nav-tab" onclick="switchTab('meals')">🍽 Meal Log</div>
@@ -538,9 +541,11 @@
     <div class="card">
       <div style="display:flex;gap:0.5rem;margin-bottom:1rem;flex-wrap:wrap;align-items:center;">
         <input type="text" id="inv-search" placeholder="Search ingredients..." style="flex:1;min-width:140px;max-width:300px;" oninput="renderInventory()"/>
-        <input type="hidden" id="inv-filter" value="available"/>
+        <input type="hidden" id="inv-filter" value="all"/>
         <input type="hidden" id="inv-sort" value="date"/>
-        <input type="hidden" id="inv-filter-cat" value="" oninput="renderInventory()"/>
+        <input type="hidden" id="inv-sort-dir" value="asc"/>
+        <input type="hidden" id="inv-filter-cat" value=""/>
+        <input type="hidden" id="inv-filter-qty" value="all"/>
       </div>
       <div class="data-table-wrap">
         <div id="inv-panel-anchor" style="position:relative;"></div>
@@ -550,11 +555,17 @@
 
   <div id="page-ingredients-db" class="page">
     <div class="page-header">
-      <div><div class="section-title">Ingredients Database</div><div class="section-desc">Nutrition info per 100g for each ingredient. Meal Log can also extract calories from this database.</div></div>
+      <div>
+        <div class="section-title">Ingredients Library</div>
+        <div class="section-desc">Nutrition reference per 100g for each ingredient. Used for meal logging and calorie calculation.</div>
+      </div>
       <button class="btn btn-primary" onclick="openIngDBAdd()">+ Add Ingredient</button>
     </div>
     <div class="card">
-      <input type="text" id="ingdb-search" placeholder="Search..." style="max-width:280px;margin-bottom:1rem;" oninput="renderIngDB()"/>
+      <div style="display:flex;gap:0.5rem;margin-bottom:1rem;flex-wrap:wrap;align-items:center;">
+        <input type="text" id="ingdb-search" placeholder="Search ingredients..." style="flex:1;min-width:140px;max-width:300px;" oninput="renderIngDB()"/>
+        <input type="hidden" id="ingdb-cat-filter-val" value=""/>
+      </div>
       <div class="data-table-wrap">
         <div id="ingdb-panel-anchor" style="position:relative;"></div>
         <div class="data-table-scroll"><div id="ingdb-table-wrap"><div class="empty-state"><div class="empty-icon">📋</div><p>No ingredients in database yet.</p></div></div></div></div>
@@ -1792,7 +1803,19 @@ function getFreshnessStatus(item) {
   return 'old';
 }
 function invSetSort(col) {
-  document.getElementById('inv-sort').value = col;
+  const sortEl    = document.getElementById('inv-sort');
+  const sortDirEl = document.getElementById('inv-sort-dir');
+  const curCol    = sortEl.value;
+  const curDir    = sortDirEl.value;
+  if (curCol !== col) {
+    sortEl.value    = col;
+    sortDirEl.value = 'asc';
+  } else if (curDir === 'asc') {
+    sortDirEl.value = 'desc';
+  } else {
+    sortEl.value    = 'date';
+    sortDirEl.value = 'asc';
+  }
   renderInventory();
 }
 function invToggleFilterPanel(id, e) {
@@ -1815,129 +1838,179 @@ document.addEventListener('click', (e) => {
 });
 function renderInventory() {
   const search    = document.getElementById('inv-search')?.value.toLowerCase() || '';
-  const filter    = document.getElementById('inv-filter')?.value || 'available';
+  const filter    = document.getElementById('inv-filter')?.value || 'all';
   const sort      = document.getElementById('inv-sort')?.value || 'date';
+  const sortDir   = document.getElementById('inv-sort-dir')?.value || 'asc';
   const catFilter = (document.getElementById('inv-filter-cat')?.value || '').toLowerCase();
+  const qtyFilter = document.getElementById('inv-filter-qty')?.value || 'all';
 
   let items = db.inventory.filter(i => {
     const matchSearch = i.name.toLowerCase().includes(search);
-    const matchCat = !catFilter || (i.category||'').toLowerCase() === catFilter;
-    const qty    = Number(i.qty);
-    const isHabis = qty <= 0;
-    const status = getFreshnessStatus(i);
+    const matchCat    = !catFilter || (i.category||'').toLowerCase() === catFilter;
+    const qty         = Number(i.qty);
+    const isHabis     = qty <= 0;
 
-    if (filter === 'available') return matchSearch && matchCat && !isHabis;
-    if (filter === 'habis')     return matchSearch && matchCat && isHabis;
-    if (filter === 'all')       return matchSearch && matchCat;
-    if (filter === 'expiring')  {
-      const dLeft = getDaysUntilExpiry(i.expiryDate);
-      return matchSearch && matchCat && !isHabis && dLeft !== null && dLeft >= 0 && dLeft <= 3;
+    // Qty filter (Ada / Habis)
+    if (qtyFilter === 'ada'   && isHabis)  return false;
+    if (qtyFilter === 'habis' && !isHabis) return false;
+
+    // Status filter — only Fresh / Expired allowed in dropdown
+    if (filter === 'fresh') {
+      return matchSearch && matchCat && !isHabis && getFreshnessStatus(i) === 'fresh';
     }
-    if (filter === 'expired')   {
+    if (filter === 'expired') {
       const dLeft = getDaysUntilExpiry(i.expiryDate);
-      return matchSearch && matchCat && !isHabis && dLeft !== null && dLeft < 0;
+      return matchSearch && matchCat && dLeft !== null && dLeft < 0;
     }
-    return matchSearch && matchCat && getFreshnessStatus(i) === filter && !isHabis;
+    // default 'all'
+    return matchSearch && matchCat;
   });
 
-  // Sort
-  const statusOrder = { fresh:0, mid:1, soon:2, old:3, unknown:4 };
-  if (sort === 'name')     items.sort((a,b) => (a.name||'').localeCompare(b.name||''));
-  else if (sort === 'category') items.sort((a,b) => (a.category||'').localeCompare(b.category||'') || (a.name||'').localeCompare(b.name||''));
-  else if (sort === 'status')   items.sort((a,b) => statusOrder[getFreshnessStatus(a)] - statusOrder[getFreshnessStatus(b)]);
-  else items.sort((a,b) => (b.purchaseDate||'').localeCompare(a.purchaseDate||''));
+  // ── Sort ──────────────────────────────────────────────────────
+  const statusOrder = { fresh:0, mid:1, soon:2, old:3, unknown:4, expired:5 };
+  const dir = sortDir === 'desc' ? -1 : 1;
+  if (sort === 'name') {
+    items.sort((a,b) => dir * (a.name||'').localeCompare(b.name||''));
+  } else if (sort === 'qty') {
+    items.sort((a,b) => dir * (Number(a.qty) - Number(b.qty)));
+  } else if (sort === 'category') {
+    items.sort((a,b) => dir * ((a.category||'').localeCompare(b.category||'') || (a.name||'').localeCompare(b.name||'')));
+  } else if (sort === 'status') {
+    items.sort((a,b) => dir * (statusOrder[getFreshnessStatus(a)] - statusOrder[getFreshnessStatus(b)]));
+  } else if (sort === 'expiry') {
+    items.sort((a,b) => {
+      const da = a.expiryDate || '9999';
+      const db2 = b.expiryDate || '9999';
+      return dir * da.localeCompare(db2);
+    });
+  } else {
+    // default: purchaseDate
+    items.sort((a,b) => dir * (b.purchaseDate||'').localeCompare(a.purchaseDate||''));
+  }
 
   const wrap = document.getElementById('inventory-table-wrap');
-  if (!items.length) {
-    const msg = filter === 'available' ? 'Semua stok habis atau belum ada item.' : 'No items found.';
-    wrap.innerHTML = `<div class="empty-state"><div class="empty-icon">🥕</div><p>${msg}</p></div>`;
-    return;
-  }
   const statusMap = { fresh:'🟢 Fresh', mid:'🟡 Exp. soon', soon:'🟠 Exp. in 2d', expired:'🔴 Expired', old:'🔴 Very old', unknown:'—' };
   const badgeMap  = { fresh:'badge-green', mid:'badge-blue', soon:'badge-orange', expired:'badge-red', old:'badge-red', unknown:'badge-grey' };
 
+  // ── 3-state sort arrow ────────────────────────────────────────
   function sortArrow(col) {
-    if (sort !== col) return `<span class="sort-indicator">↕</span>`;
-    return `<span class="sort-indicator active">↑</span>`;
+    if (sort !== col) return `<span class="sort-indicator" style="opacity:0.35;font-size:0.65rem;">⬍</span>`;
+    if (sortDir === 'asc')  return `<span class="sort-indicator active">▲</span>`;
+    return `<span class="sort-indicator active">▼</span>`;
   }
 
-  const activeCatFilter = catFilter ? 'active' : '';
-  const activeStatusFilter = (filter !== 'available') ? 'active' : '';
-  // Render panels into the anchor (outside scroll area so they stay visible)
+  // ── Reset all filters helper ─────────────────────────────────
+  const hasActiveFilter = catFilter || filter !== 'all' || qtyFilter !== 'all';
+
+  // ── Build the inline filter row HTML (rendered inside <thead>) ─
+  // (injected directly into the table header — no floating panels)
+
+  const catFilterRow = `
+    <select class="inv-inline-select" onchange="document.getElementById('inv-filter-cat').value=this.value;renderInventory();" title="Filter Kategori">
+      <option value="" ${!catFilter?'selected':''}>Semua Kategori</option>
+      <option value="sayuran"        ${catFilter==='sayuran'?'selected':''}>Sayuran</option>
+      <option value="buah"           ${catFilter==='buah'?'selected':''}>Buah</option>
+      <option value="protein/daging" ${catFilter==='protein/daging'?'selected':''}>Protein/Daging</option>
+      <option value="seafood"        ${catFilter==='seafood'?'selected':''}>Seafood</option>
+      <option value="dairy/telur"    ${catFilter==='dairy/telur'?'selected':''}>Dairy/Telur</option>
+      <option value="bumbu dapur"    ${catFilter==='bumbu dapur'?'selected':''}>Bumbu Dapur</option>
+      <option value="karbohidrat/biji" ${catFilter==='karbohidrat/biji'?'selected':''}>Karbohidrat/Biji</option>
+      <option value="minyak/lemak"   ${catFilter==='minyak/lemak'?'selected':''}>Minyak/Lemak</option>
+      <option value="snacks"         ${catFilter==='snacks'?'selected':''}>Snacks</option>
+      <option value="minuman"        ${catFilter==='minuman'?'selected':''}>Minuman</option>
+      <option value="lainnya"        ${catFilter==='lainnya'?'selected':''}>Lainnya</option>
+    </select>`;
+
+  const qtyFilterRow = `
+    <select class="inv-inline-select" onchange="document.getElementById('inv-filter-qty').value=this.value;renderInventory();" title="Filter Qty">
+      <option value="all"   ${qtyFilter==='all'  ?'selected':''}>Semua</option>
+      <option value="ada"   ${qtyFilter==='ada'  ?'selected':''}>Ada (qty &gt; 0)</option>
+      <option value="habis" ${qtyFilter==='habis'?'selected':''}>Habis (qty = 0)</option>
+    </select>`;
+
+  const statusFilterRow = `
+    <select class="inv-inline-select" onchange="document.getElementById('inv-filter').value=this.value;renderInventory();" title="Filter Status">
+      <option value="all"     ${filter==='all'    ?'selected':''}>Semua</option>
+      <option value="fresh"   ${filter==='fresh'  ?'selected':''}>🟢 Fresh</option>
+      <option value="expired" ${filter==='expired'?'selected':''}>🔴 Expired</option>
+    </select>`;
+
+  const resetBtn = hasActiveFilter
+    ? `<button class="btn btn-ghost btn-sm" style="font-size:0.68rem;padding:0.2rem 0.5rem;color:var(--red);border-color:rgba(224,96,112,0.3);" onclick="invResetAllFilters()">✕ Reset Filter</button>`
+    : '';
+
+  const emptyMsg = items.length === 0
+    ? `<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">🥕</div><p>No items match the current filters.</p></div></td></tr>`
+    : items.map(i => {
+        const qty    = Number(i.qty);
+        const isHabis = qty <= 0;
+        const daysLeft = getDaysUntilExpiry(i.expiryDate);
+        const status = getFreshnessStatus(i);
+        const expiryStr = i.expiryDate
+          ? (daysLeft < 0 ? '<span style="color:var(--red);font-weight:700;">' + i.expiryDate + ' ⚠</span>'
+            : daysLeft === 0 ? '<span style="color:var(--red);font-weight:700;">' + i.expiryDate + ' (today!)</span>'
+            : i.expiryDate + ' <span style="font-size:0.68rem;color:var(--text3);">(' + daysLeft + 'd)</span>')
+          : '<span style="color:var(--text3);">—</span>';
+        const qtyDisplay = isHabis
+          ? `<span style="color:var(--red);font-weight:700;">0 ${esc(i.unit)}</span> <span class="badge-habis">HABIS</span>`
+          : `${qty} ${esc(i.unit)}`;
+        const statusCell = isHabis
+          ? `<span class="badge badge-red">🚫 Habis</span>`
+          : `<span class="badge ${badgeMap[status]}">${statusMap[status]}</span>`;
+        return `<tr style="${isHabis ? 'opacity:0.6;' : ''}">
+          <td><strong>${esc(i.name)}</strong></td>
+          <td style="white-space:nowrap;">${qtyDisplay}</td>
+          <td><span class="badge badge-grey">${esc(i.category)||'—'}</span></td>
+          <td style="font-size:0.72rem;color:var(--text2);white-space:nowrap;">${i.purchaseDate||'—'}</td>
+          <td style="font-size:0.72rem;white-space:nowrap;">${expiryStr}</td>
+          <td>${statusCell}</td>
+          <td style="max-width:120px;font-size:0.72rem;color:var(--text2);">${esc(i.notes)||'<span style="color:var(--text3);font-style:italic;">—</span>'}</td>
+          <td style="white-space:nowrap;">
+            <button class="btn btn-ghost btn-sm" style="color:var(--orange);border-color:rgba(240,160,96,0.4);margin-bottom:0.2rem;" onclick="openInventoryReduce('${i.id}')">📉 Reduce</button><br/>
+            <button class="btn btn-ghost btn-sm" onclick="openInventoryEdit('${i.id}')">✏ Edit</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteRow('inventory','inventory','${i.id}')">✕</button>
+          </td>
+        </tr>`;
+      }).join('');
+
+  // Clear the anchor (no more floating panels)
   const anchor = document.getElementById('inv-panel-anchor');
-  if (anchor) {
-    anchor.innerHTML = `
-    <div id="inv-col-cat-panel" class="col-filter-panel" style="top:0.25rem;left:0;">
-      <div style="font-size:0.68rem;color:var(--text3);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.3rem;">Filter Kategori</div>
-      <select onchange="document.getElementById('inv-filter-cat').value=this.value;invCloseFilterPanel('inv-col-cat-panel');renderInventory();">
-        <option value="" ${!catFilter?'selected':''}>Semua</option>
-        <option value="sayuran" ${catFilter==='sayuran'?'selected':''}>Sayuran</option>
-        <option value="buah" ${catFilter==='buah'?'selected':''}>Buah</option>
-        <option value="protein/daging" ${catFilter==='protein/daging'?'selected':''}>Protein/Daging</option>
-        <option value="seafood" ${catFilter==='seafood'?'selected':''}>Seafood</option>
-        <option value="dairy/telur" ${catFilter==='dairy/telur'?'selected':''}>Dairy/Telur</option>
-        <option value="bumbu dapur" ${catFilter==='bumbu dapur'?'selected':''}>Bumbu Dapur</option>
-        <option value="karbohidrat/biji" ${catFilter==='karbohidrat/biji'?'selected':''}>Karbohidrat/Biji</option>
-        <option value="minyak/lemak" ${catFilter==='minyak/lemak'?'selected':''}>Minyak/Lemak</option>
-        <option value="snacks" ${catFilter==='snacks'?'selected':''}>Snacks</option>
-        <option value="minuman" ${catFilter==='minuman'?'selected':''}>Minuman</option>
-        <option value="lainnya" ${catFilter==='lainnya'?'selected':''}>Lainnya</option>
-      </select>
-    </div>
-    <div id="inv-col-status-panel" class="col-filter-panel" style="top:0.25rem;left:0;">
-      <div style="font-size:0.68rem;color:var(--text3);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.3rem;">Filter Status</div>
-      <select onchange="document.getElementById('inv-filter').value=this.value||'available';invCloseFilterPanel('inv-col-status-panel');renderInventory();">
-        <option value="available" ${filter==='available'?'selected':''}>✅ Ada</option>
-        <option value="all" ${filter==='all'?'selected':''}>Semua</option>
-        <option value="fresh" ${filter==='fresh'?'selected':''}>🟢 Fresh</option>
-        <option value="mid" ${filter==='mid'?'selected':''}>🟡 Mid</option>
-        <option value="expiring" ${filter==='expiring'?'selected':''}>🟠 Expiring</option>
-        <option value="expired" ${filter==='expired'?'selected':''}>🔴 Expired</option>
-        <option value="habis" ${filter==='habis'?'selected':''}>🚫 Habis</option>
-      </select>
-    </div>`;
-  }
+  if (anchor) anchor.innerHTML = '';
 
-  wrap.innerHTML = `<table class="data-table"><thead><tr>
-    <th class="inv-th" onclick="invSetSort('name')">Item ${sortArrow('name')}</th>
-    <th class="inv-th" onclick="invSetSort('date')">Qty ${sortArrow('date')}</th>
-    <th style="white-space:nowrap;">Kategori <button class="col-filter-btn ${activeCatFilter}" title="Filter kategori" onclick="invToggleFilterPanel('inv-col-cat-panel',event)">⊟</button></th>
-    <th class="inv-th" onclick="invSetSort('date')">Dibeli ${sortArrow('date')}</th>
-    <th>Exp. Date</th>
-    <th style="white-space:nowrap;">Status <button class="col-filter-btn ${activeStatusFilter}" title="Filter status" onclick="invToggleFilterPanel('inv-col-status-panel',event)">⊟</button></th>
-    <th>Notes</th><th>Actions</th>
-  </tr></thead><tbody>${items.map(i => {
-    const qty    = Number(i.qty);
-    const isHabis = qty <= 0;
-    const daysLeft = getDaysUntilExpiry(i.expiryDate);
-    const status = getFreshnessStatus(i);
-    const expiryStr = i.expiryDate
-      ? (daysLeft < 0 ? '<span style="color:var(--red);font-weight:700;">' + i.expiryDate + ' ⚠</span>'
-        : daysLeft === 0 ? '<span style="color:var(--red);font-weight:700;">' + i.expiryDate + ' (today!)</span>'
-        : i.expiryDate + ' <span style="font-size:0.68rem;color:var(--text3);">(' + daysLeft + 'd)</span>')
-      : '<span style="color:var(--text3);">—</span>';
+  wrap.innerHTML = `
+    <div style="display:flex;justify-content:flex-end;margin-bottom:0.4rem;">${resetBtn}</div>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th class="inv-th" onclick="invSetSort('name')">Item ${sortArrow('name')}</th>
+          <th class="inv-th" onclick="invSetSort('qty')">Qty ${sortArrow('qty')}</th>
+          <th class="inv-th" onclick="invSetSort('category')">Kategori ${sortArrow('category')}</th>
+          <th class="inv-th" onclick="invSetSort('date')">Dibeli ${sortArrow('date')}</th>
+          <th class="inv-th" onclick="invSetSort('expiry')">Exp. Date ${sortArrow('expiry')}</th>
+          <th class="inv-th" onclick="invSetSort('status')">Status ${sortArrow('status')}</th>
+          <th>Notes</th>
+          <th>Actions</th>
+        </tr>
+        <tr class="inv-filter-row">
+          <td></td>
+          <td>${qtyFilterRow}</td>
+          <td>${catFilterRow}</td>
+          <td></td>
+          <td></td>
+          <td>${statusFilterRow}</td>
+          <td></td>
+          <td></td>
+        </tr>
+      </thead>
+      <tbody>${emptyMsg}</tbody>
+    </table>`;
+}
 
-    const qtyDisplay = isHabis
-      ? `<span style="color:var(--red);font-weight:700;">0 ${esc(i.unit)}</span> <span class="badge-habis">HABIS</span>`
-      : `${qty} ${esc(i.unit)}`;
-    const statusCell = isHabis
-      ? `<span class="badge badge-red">🚫 Habis</span>`
-      : `<span class="badge ${badgeMap[status]}">${statusMap[status]}</span>`;
-    return `<tr style="${isHabis ? 'opacity:0.6;' : ''}">
-      <td><strong>${esc(i.name)}</strong></td>
-      <td style="white-space:nowrap;">${qtyDisplay}</td>
-      <td><span class="badge badge-grey">${esc(i.category)||'—'}</span></td>
-      <td style="font-size:0.72rem;color:var(--text2);white-space:nowrap;">${i.purchaseDate||'—'}</td>
-      <td style="font-size:0.72rem;white-space:nowrap;">${expiryStr}</td>
-      <td>${statusCell}</td>
-      <td style="max-width:120px;font-size:0.72rem;color:var(--text2);">${esc(i.notes)||'<span style="color:var(--text3);font-style:italic;">—</span>'}</td>
-      <td style="white-space:nowrap;">
-        <button class="btn btn-ghost btn-sm" style="color:var(--orange);border-color:rgba(240,160,96,0.4);margin-bottom:0.2rem;" onclick="openInventoryReduce('${i.id}')">📉 Reduce</button><br/>
-        <button class="btn btn-ghost btn-sm" onclick="openInventoryEdit('${i.id}')">✏ Edit</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteRow('inventory','inventory','${i.id}')">✕</button>
-      </td>
-    </tr>`;
-  }).join('')}</tbody></table>`;
+function invResetAllFilters() {
+  document.getElementById('inv-filter').value     = 'all';
+  document.getElementById('inv-filter-cat').value = '';
+  document.getElementById('inv-filter-qty').value = 'all';
+  renderInventory();
 }
 
 function openInventoryEdit(id) {
@@ -2324,67 +2397,123 @@ async function saveIngDB() {
     else showToast('Failed to save', 'error');
   }
 }
-let ingDbSort = { col: 'name', dir: 1 };
+let ingDbSort = { col: null, dir: 'asc' };
 let ingDbCatFilter = '';
 function ingDbSetSort(col) {
-  if (ingDbSort.col === col) ingDbSort.dir *= -1;
-  else { ingDbSort.col = col; ingDbSort.dir = 1; }
+  if (ingDbSort.col !== col) {
+    ingDbSort.col = col; ingDbSort.dir = 'asc';
+  } else if (ingDbSort.dir === 'asc') {
+    ingDbSort.dir = 'desc';
+  } else {
+    ingDbSort.col = null; ingDbSort.dir = 'asc'; // reset
+  }
   renderIngDB();
 }
 function ingDbSortArrow(col) {
-  if (ingDbSort.col !== col) return `<span class="sort-indicator">↕</span>`;
-  return `<span class="sort-indicator active">${ingDbSort.dir === 1 ? '↑' : '↓'}</span>`;
+  if (ingDbSort.col !== col) return `<span class="sort-indicator" style="opacity:0.35;font-size:0.65rem;">⬍</span>`;
+  if (ingDbSort.dir === 'asc') return `<span class="sort-indicator active">▲</span>`;
+  return `<span class="sort-indicator active">▼</span>`;
 }
 function renderIngDB() {
   const search = document.getElementById('ingdb-search')?.value.toLowerCase() || '';
-  let items = db.ingredientsDB.filter(i => i.name.toLowerCase().includes(search) && (!ingDbCatFilter || (i.category||'').toLowerCase() === ingDbCatFilter));
-  // Sort
-  items.sort((a,b) => {
-    let av = a[ingDbSort.col] ?? ''; let bv = b[ingDbSort.col] ?? '';
-    if (typeof av === 'string') return av.localeCompare(bv) * ingDbSort.dir;
-    return (Number(av) - Number(bv)) * ingDbSort.dir;
+  // sync catFilter from hidden input OR module var
+  const catFromInput = document.getElementById('ingdb-cat-filter-val')?.value || '';
+  ingDbCatFilter = catFromInput;
+
+  let items = db.ingredientsDB.filter(i => {
+    const matchName = i.name.toLowerCase().includes(search) || (i.category||'').toLowerCase().includes(search);
+    const matchCat  = !ingDbCatFilter || (i.category||'').toLowerCase() === ingDbCatFilter;
+    return matchName && matchCat;
   });
+
+  // ── Sort (3-state, numeric-aware) ────────────────────────────
+  if (ingDbSort.col) {
+    const dir = ingDbSort.dir === 'desc' ? -1 : 1;
+    const numCols = ['cal','protein','fat','carbs','fiber'];
+    items.sort((a, b) => {
+      let av = a[ingDbSort.col] ?? '';
+      let bv = b[ingDbSort.col] ?? '';
+      if (numCols.includes(ingDbSort.col)) {
+        return (Number(av) - Number(bv)) * dir;
+      }
+      return String(av).localeCompare(String(bv)) * dir;
+    });
+  } // else: keep default insertion order
+
   const wrap = document.getElementById('ingdb-table-wrap');
-  if (!items.length) { wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><p>No ingredients in database.</p></div>'; return; }
-  const activeCat = ingDbCatFilter ? 'active' : '';
-  const ingDbAnchor = document.getElementById('ingdb-panel-anchor');
-  if (ingDbAnchor) {
-    ingDbAnchor.innerHTML = `
-    <div id="ingdb-cat-panel" class="col-filter-panel" style="top:0.25rem;left:0;">
-      <div style="font-size:0.68rem;color:var(--text3);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.3rem;">Filter Category</div>
-      <select onchange="ingDbCatFilter=this.value;invCloseFilterPanel('ingdb-cat-panel');renderIngDB();">
-        <option value="" ${!ingDbCatFilter?'selected':''}>All</option>
-        <option value="protein" ${ingDbCatFilter==='protein'?'selected':''}>Protein</option>
-        <option value="vegetable" ${ingDbCatFilter==='vegetable'?'selected':''}>Vegetable</option>
-        <option value="fruit" ${ingDbCatFilter==='fruit'?'selected':''}>Fruit</option>
-        <option value="grain/carb" ${ingDbCatFilter==='grain/carb'?'selected':''}>Grain/Carb</option>
-        <option value="dairy" ${ingDbCatFilter==='dairy'?'selected':''}>Dairy</option>
-        <option value="fat/oil" ${ingDbCatFilter==='fat/oil'?'selected':''}>Fat/Oil</option>
-        <option value="spice/herb" ${ingDbCatFilter==='spice/herb'?'selected':''}>Spice/Herb</option>
-        <option value="bumbu dapur" ${ingDbCatFilter==='bumbu dapur'?'selected':''}>Bumbu Dapur</option>
-        <option value="beverage" ${ingDbCatFilter==='beverage'?'selected':''}>Beverage</option>
-        <option value="other" ${ingDbCatFilter==='other'?'selected':''}>Other</option>
-      </select>
-    </div>`;
-  }
-  wrap.innerHTML = `<table class="data-table"><thead><tr>
-    <th class="inv-th" onclick="ingDbSetSort('name')">Name ${ingDbSortArrow('name')}</th>
-    <th style="white-space:nowrap;">Category <button class="col-filter-btn ${activeCat}" title="Filter kategori" onclick="invToggleFilterPanel('ingdb-cat-panel',event)">⊟</button></th>
-    <th class="inv-th" onclick="ingDbSetSort('cal')">Cal/100g ${ingDbSortArrow('cal')}</th>
-    <th class="inv-th" onclick="ingDbSetSort('protein')">Protein ${ingDbSortArrow('protein')}</th>
-    <th class="inv-th" onclick="ingDbSetSort('fat')">Fat ${ingDbSortArrow('fat')}</th>
-    <th class="inv-th" onclick="ingDbSetSort('carbs')">Carbs ${ingDbSortArrow('carbs')}</th>
-    <th class="inv-th" onclick="ingDbSetSort('fiber')">Fiber ${ingDbSortArrow('fiber')}</th>
-    <th>Actions</th>
-  </tr></thead><tbody>${items.map(i => `<tr>
-    <td><strong>${esc(i.name)}</strong></td>
-    <td><span class="badge badge-grey">${esc(i.category)}</span></td>
-    <td>${i.cal} kcal</td><td>${i.protein}g</td><td>${i.fat}g</td><td>${i.carbs}g</td><td>${i.fiber}g</td>
-    <td>
-      <button class="btn btn-ghost btn-sm" onclick="openIngDBEdit('${i.id}')">✏ Edit</button>
-      <button class="btn btn-danger btn-sm" onclick="deleteRow('ingredientsDB','ingredientsDB','${i.id}')">✕</button>
-    </td>
-  </tr>`).join('')}</tbody></table>`;
+  const hasActiveFilter = !!ingDbCatFilter;
+  const hasActiveSort   = !!ingDbSort.col;
+
+  // ── Inline category filter dropdown ──────────────────────────
+  const catFilterRow = `
+    <select class="inv-inline-select" onchange="document.getElementById('ingdb-cat-filter-val').value=this.value;ingDbCatFilter=this.value;renderIngDB();" title="Filter Category">
+      <option value="" ${!ingDbCatFilter?'selected':''}>Semua Kategori</option>
+      <option value="grain/carb"  ${ingDbCatFilter==='grain/carb' ?'selected':''}>Grain/Carb</option>
+      <option value="protein"     ${ingDbCatFilter==='protein'    ?'selected':''}>Protein</option>
+      <option value="fat/oil"     ${ingDbCatFilter==='fat/oil'    ?'selected':''}>Fat/Oil</option>
+      <option value="dairy"       ${ingDbCatFilter==='dairy'      ?'selected':''}>Dairy</option>
+      <option value="vegetable"   ${ingDbCatFilter==='vegetable'  ?'selected':''}>Vegetable</option>
+      <option value="fruit"       ${ingDbCatFilter==='fruit'      ?'selected':''}>Fruit</option>
+      <option value="spice/herb"  ${ingDbCatFilter==='spice/herb' ?'selected':''}>Spice/Herb</option>
+      <option value="bumbu dapur" ${ingDbCatFilter==='bumbu dapur'?'selected':''}>Bumbu Dapur</option>
+      <option value="beverage"    ${ingDbCatFilter==='beverage'   ?'selected':''}>Beverage</option>
+      <option value="other"       ${ingDbCatFilter==='other'      ?'selected':''}>Other</option>
+    </select>`;
+
+  const resetBtn = (hasActiveFilter || hasActiveSort)
+    ? `<button class="btn btn-ghost btn-sm" style="font-size:0.68rem;padding:0.2rem 0.5rem;color:var(--red);border-color:rgba(224,96,112,0.3);" onclick="ingDbResetAll()">✕ Reset</button>`
+    : '';
+
+  // Clear anchor (no floating panels)
+  const anchor = document.getElementById('ingdb-panel-anchor');
+  if (anchor) anchor.innerHTML = '';
+
+  const rows = !items.length
+    ? `<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">📋</div><p>No ingredients found.</p></div></td></tr>`
+    : items.map(i => `<tr>
+        <td><strong>${esc(i.name)}</strong></td>
+        <td><span class="badge badge-grey">${esc(i.category)||'—'}</span></td>
+        <td style="font-family:'DM Mono',monospace;">${i.cal ?? '—'} <span style="font-size:0.68rem;color:var(--text3);">kcal</span></td>
+        <td style="font-family:'DM Mono',monospace;">${i.protein ?? '—'}<span style="font-size:0.68rem;color:var(--text3);">g</span></td>
+        <td style="font-family:'DM Mono',monospace;">${i.fat ?? '—'}<span style="font-size:0.68rem;color:var(--text3);">g</span></td>
+        <td style="font-family:'DM Mono',monospace;">${i.carbs ?? '—'}<span style="font-size:0.68rem;color:var(--text3);">g</span></td>
+        <td style="font-family:'DM Mono',monospace;">${i.fiber ?? '—'}<span style="font-size:0.68rem;color:var(--text3);">g</span></td>
+        <td style="white-space:nowrap;">
+          <button class="btn btn-ghost btn-sm" onclick="openIngDBEdit('${i.id}')">✏ Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteRow('ingredientsDB','ingredientsDB','${i.id}')">✕</button>
+        </td>
+      </tr>`).join('');
+
+  wrap.innerHTML = `
+    <div style="display:flex;justify-content:flex-end;margin-bottom:0.4rem;">${resetBtn}</div>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th class="inv-th" onclick="ingDbSetSort('name')">Name ${ingDbSortArrow('name')}</th>
+          <th class="inv-th" onclick="ingDbSetSort('category')">Category ${ingDbSortArrow('category')}</th>
+          <th class="inv-th" onclick="ingDbSetSort('cal')">Cal/100g ${ingDbSortArrow('cal')}</th>
+          <th class="inv-th" onclick="ingDbSetSort('protein')">Protein ${ingDbSortArrow('protein')}</th>
+          <th class="inv-th" onclick="ingDbSetSort('fat')">Fat ${ingDbSortArrow('fat')}</th>
+          <th class="inv-th" onclick="ingDbSetSort('carbs')">Carbs ${ingDbSortArrow('carbs')}</th>
+          <th class="inv-th" onclick="ingDbSetSort('fiber')">Fiber ${ingDbSortArrow('fiber')}</th>
+          <th>Actions</th>
+        </tr>
+        <tr class="inv-filter-row">
+          <td></td>
+          <td>${catFilterRow}</td>
+          <td></td><td></td><td></td><td></td><td></td><td></td>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+function ingDbResetAll() {
+  ingDbSort = { col: null, dir: 'asc' };
+  ingDbCatFilter = '';
+  const el = document.getElementById('ingdb-cat-filter-val');
+  if (el) el.value = '';
+  renderIngDB();
 }
 function updateIngDBList() {
   const dl = document.getElementById('ingdb-list2');
