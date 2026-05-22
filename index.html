@@ -77,7 +77,7 @@
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
 /* ── NAV TABS ── */
-  .nav-tabs { display: flex; border-bottom: 1px solid var(--border); background: var(--surface); overflow-x: auto; padding: 0 0.5rem; }
+  .nav-tabs { display: flex; border-bottom: 1px solid var(--border); background: var(--surface); overflow-x: auto; padding: 0 0.5rem; position: sticky; top: 48px; z-index: 99; }
   .nav-tab { padding: 0.7rem 1rem; font-size: 0.8rem; font-weight: 500; color: var(--text2); cursor: pointer; white-space: nowrap; border-bottom: 2.5px solid transparent; transition: color 0.15s, border-color 0.15s; }
   .nav-tab:hover { color: var(--text); }
   .nav-tab.active { color: var(--accent2); border-bottom-color: var(--accent); font-weight: 600; }
@@ -169,9 +169,10 @@
   .form-actions { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1rem; flex-wrap: wrap; }
 
 /* ── MODALS ── */
-  .modal-overlay { display: none; position: fixed; inset: 0; z-index: 200; background: rgba(61,44,34,0.35); backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 1rem; }
+  .modal-overlay { display: none; position: fixed; inset: 0; z-index: 200; background: rgba(61,44,34,0.35); backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 1rem; overflow: hidden; }
   .modal-overlay.open { display: flex; }
-  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 1.5rem; width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto; box-shadow: 0 8px 40px rgba(100,60,30,0.15); }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 1.5rem; width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto; overflow-x: hidden; box-shadow: 0 8px 40px rgba(100,60,30,0.15); -webkit-overflow-scrolling: touch; }
+  .modal input, .modal select, .modal textarea { max-width: 100%; }
   .modal-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem; }
   .modal-title { font-size: 1rem; font-weight: 700; color: var(--text); }
   .modal-close { background: none; border: none; font-size: 1.1rem; cursor: pointer; color: var(--text3); padding: 0 0.25rem; line-height: 1; }
@@ -290,7 +291,23 @@
   .settings-subtab:hover { color: var(--text); }
   .settings-subtab.active { color: var(--accent2); border-bottom-color: var(--accent); font-weight: 600; }
 
-/* ── MOBILE FIXES ── */
+/* ── INVENTORY SORTABLE TABLE ── */
+  .inv-th { cursor: pointer; user-select: none; white-space: nowrap; }
+  .inv-th:hover { color: var(--accent2); }
+  .sort-indicator { font-size: 0.65rem; margin-left: 0.2rem; opacity: 0.5; }
+  .sort-indicator.active { opacity: 1; color: var(--accent2); }
+  .data-table-wrap { position: relative; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .data-table-scroll { overflow-y: auto; max-height: 62vh; -webkit-overflow-scrolling: touch; }
+  .data-table-scroll table thead { position: sticky; top: 0; z-index: 10; background: var(--surface); }
+  .data-table-scroll table thead th { background: var(--surface); box-shadow: 0 1px 0 var(--border); }
+  .data-table-wrap table thead { position: sticky; top: 0; z-index: 10; background: var(--surface); }
+  .data-table-wrap table thead th { background: var(--surface); box-shadow: 0 1px 0 var(--border); }
+  /* ── COLUMN FILTER BUTTON ── */
+  .col-filter-btn { background: none; border: none; cursor: pointer; padding: 0.1rem 0.2rem; border-radius: 4px; font-size: 0.72rem; opacity: 0.3; transition: opacity 0.15s, color 0.15s; color: var(--text2); line-height: 1; vertical-align: middle; }
+  .col-filter-btn:hover, .col-filter-btn.active { opacity: 1; color: var(--accent2); }
+  .col-filter-panel { display: none; position: absolute; background: var(--surface); border: 1px solid var(--border2); border-radius: 10px; padding: 0.5rem 0.65rem; z-index: 200; box-shadow: 0 4px 16px rgba(100,60,30,0.12); min-width: 160px; font-size: 0.78rem; white-space: nowrap; }
+  .col-filter-panel.open { display: block; }
+  .col-filter-panel select { width: 100%; font-size: 0.78rem; margin-top: 0.3rem; }
   @media (max-width: 768px) {
     .app-header { padding: 0.5rem 0.75rem; flex-wrap: wrap; gap: 0.4rem; }
     .header-right { gap: 0.3rem; flex-wrap: wrap; }
@@ -394,7 +411,6 @@
         <span id="sync-label">synced</span>
       </div>
       <button class="btn btn-ghost btn-sm" id="tz-btn" onclick="openTzModal()" title="Change timezone">🌐 <span id="tz-label">UTC</span></button>
-      <button class="btn btn-ghost btn-sm" onclick="switchTab('settings')">⚙ Settings</button>
     </div>
   </header>
   <nav class="nav-tabs">
@@ -434,12 +450,18 @@
         </div>
         <button class="btn btn-ghost btn-sm" onclick="toggleBaselineEdit()">✏ Edit</button>
       </div>
-      <div id="baseline-display" class="baseline-row">
-        <span class="baseline-label">Calories:</span><span class="baseline-val" id="bl-cal-disp">2000</span><span style="font-size:0.72rem;color:var(--text3);">kcal</span>
-        <span class="baseline-label" style="margin-left:0.75rem;">Protein:</span><span class="baseline-val" id="bl-prot-disp">150</span><span style="font-size:0.72rem;color:var(--text3);">g</span>
-        <span class="baseline-label" style="margin-left:0.75rem;">Carbs:</span><span class="baseline-val" id="bl-carbs-disp">250</span><span style="font-size:0.72rem;color:var(--text3);">g</span>
-        <span class="baseline-label" style="margin-left:0.75rem;">Fat:</span><span class="baseline-val" id="bl-fat-disp">65</span><span style="font-size:0.72rem;color:var(--text3);">g</span>
-        <span class="baseline-label" style="margin-left:0.75rem;">Fiber:</span><span class="baseline-val" id="bl-fiber-disp">30</span><span style="font-size:0.72rem;color:var(--text3);">g</span>
+      <div id="baseline-display">
+        <div style="margin-bottom:0.4rem;">
+          <span class="baseline-label">Calories:</span>
+          <span class="baseline-val" id="bl-cal-disp" style="font-size:1.35rem;color:var(--accent2);">2000</span>
+          <span style="font-size:0.78rem;color:var(--text3);">kcal</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.1rem 0.5rem;">
+          <div><span class="baseline-label" style="display:inline-block;width:52px;">Protein:</span><span class="baseline-val" id="bl-prot-disp">150</span><span style="font-size:0.72rem;color:var(--text3);"> g</span></div>
+          <div><span class="baseline-label" style="display:inline-block;width:42px;">Carbs:</span><span class="baseline-val" id="bl-carbs-disp">250</span><span style="font-size:0.72rem;color:var(--text3);"> g</span></div>
+          <div><span class="baseline-label" style="display:inline-block;width:52px;">Fat:</span><span class="baseline-val" id="bl-fat-disp">65</span><span style="font-size:0.72rem;color:var(--text3);"> g</span></div>
+          <div><span class="baseline-label" style="display:inline-block;width:42px;">Fiber:</span><span class="baseline-val" id="bl-fiber-disp">30</span><span style="font-size:0.72rem;color:var(--text3);"> g</span></div>
+        </div>
       </div>
       <div id="baseline-edit" style="display:none;">
         <div class="baseline-inputs">
@@ -453,8 +475,8 @@
       </div>
     </div>
     <div class="grid-2" style="margin-bottom:1rem;">
-      <div class="stat-block"><div class="stat-label">Calories Today</div><div class="stat-value text-accent" id="dash-cal">—</div><div class="stat-change" id="dash-cal-vs-base">kcal consumed</div></div>
-      <div class="stat-block"><div class="stat-label">🔥 Logging Streak</div><div class="stat-value" id="dash-streak">—</div><div class="stat-change" id="dash-streak-sub">days logged in a row</div></div>
+      <div class="stat-block" style="display:flex;flex-direction:column;align-items:center;text-align:center;"><div class="stat-label">Calories Today</div><div class="stat-value text-accent" id="dash-cal">—</div><div class="stat-change" id="dash-cal-vs-base">kcal consumed</div></div>
+      <div class="stat-block" style="display:flex;flex-direction:column;align-items:center;text-align:center;"><div class="stat-label">🔥 Logging Streak</div><div class="stat-value" id="dash-streak">—</div><div class="stat-change" id="dash-streak-sub">days logged in a row</div></div>
     </div>
     <div class="grid-2">
       <div class="card">
@@ -508,28 +530,21 @@
 
   <div id="page-inventory" class="page">
     <div class="page-header"><div><div class="section-title">Inventory</div><div class="section-desc">Items auto-added from Grocery Shopping. Click Edit Data to update all fields.</div></div>
-    <button class="btn btn-primary" onclick="openManualInventoryAdd()">+ Add Item</button>
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+      <button class="btn btn-ghost btn-sm" style="color:var(--red);border-color:rgba(224,96,112,0.3);" onclick="openExpiredLog()">🗑 Lihat Basi/Expired</button>
+      <button class="btn btn-primary" onclick="openManualInventoryAdd()">+ Add Item</button>
+    </div>
     </div>
     <div class="card">
       <div style="display:flex;gap:0.5rem;margin-bottom:1rem;flex-wrap:wrap;align-items:center;">
-        <input type="text" id="inv-search" placeholder="Search ingredients..." style="flex:1;min-width:140px;max-width:240px;" oninput="renderInventory()"/>
-        <select id="inv-filter" style="flex:1;min-width:140px;max-width:200px;" onchange="renderInventory()">
-          <option value="available">✅ Ada (qty &gt; 0)</option>
-          <option value="all">Semua (termasuk habis)</option>
-          <option value="habis">🚫 Habis saja</option>
-          <option value="expiring">🟠 Expiring soon (≤3 days)</option>
-          <option value="expired">🔴 Sudah expired</option>
-          <option value="fresh">🟢 Fresh</option>
-          <option value="mid">🟡 Getting old</option>
-        </select>
-        <select id="inv-sort" style="flex:1;min-width:140px;max-width:200px;" onchange="renderInventory()">
-          <option value="date">Sort: Newest first</option>
-          <option value="name">Sort: Name A–Z</option>
-          <option value="category">Sort: Category</option>
-          <option value="status">Sort: Status</option>
-        </select>
+        <input type="text" id="inv-search" placeholder="Search ingredients..." style="flex:1;min-width:140px;max-width:300px;" oninput="renderInventory()"/>
+        <input type="hidden" id="inv-filter" value="available"/>
+        <input type="hidden" id="inv-sort" value="date"/>
+        <input type="hidden" id="inv-filter-cat" value="" oninput="renderInventory()"/>
       </div>
-      <div class="data-table-wrap"><div id="inventory-table-wrap"><div class="empty-state"><div class="empty-icon">🥕</div><p>No items yet. Add groceries in the Grocery Shopping tab.</p></div></div></div>
+      <div class="data-table-wrap">
+        <div id="inv-panel-anchor" style="position:relative;"></div>
+        <div class="data-table-scroll"><div id="inventory-table-wrap"><div class="empty-state"><div class="empty-icon">🥕</div><p>No items yet. Add groceries in the Grocery Shopping tab.</p></div></div></div></div>
     </div>
   </div>
 
@@ -540,7 +555,9 @@
     </div>
     <div class="card">
       <input type="text" id="ingdb-search" placeholder="Search..." style="max-width:280px;margin-bottom:1rem;" oninput="renderIngDB()"/>
-      <div class="data-table-wrap"><div id="ingdb-table-wrap"><div class="empty-state"><div class="empty-icon">📋</div><p>No ingredients in database yet.</p></div></div></div>
+      <div class="data-table-wrap">
+        <div id="ingdb-panel-anchor" style="position:relative;"></div>
+        <div class="data-table-scroll"><div id="ingdb-table-wrap"><div class="empty-state"><div class="empty-icon">📋</div><p>No ingredients in database yet.</p></div></div></div></div>
     </div>
   </div>
 
@@ -558,11 +575,16 @@
         </select>
         <select id="cook-sort" style="flex:1;min-width:150px;max-width:200px;" onchange="renderCooking()">
           <option value="date">Sort: Terbaru</option>
+          <option value="dish-az">Sort: Dish A–Z</option>
+          <option value="dish-za">Sort: Dish Z–A</option>
           <option value="avail-desc">Sort: Sisa terbanyak ↓</option>
           <option value="avail-asc">Sort: Sisa tersedikit ↑</option>
+          <option value="cal-desc">Sort: Kalori ↓</option>
         </select>
       </div>
-      <div class="data-table-wrap"><div id="cooking-table-wrap"><div class="empty-state"><div class="empty-icon">🍳</div><p>No cooking sessions logged yet.</p></div></div></div>
+      <div class="data-table-wrap">
+        <div id="cook-panel-anchor" style="position:relative;"></div>
+        <div class="data-table-scroll"><div id="cooking-table-wrap"><div class="empty-state"><div class="empty-icon">🍳</div><p>No cooking sessions logged yet.</p></div></div></div></div>
     </div>
   </div>
 
@@ -678,16 +700,25 @@
     <div id="unit-conversion-list-page"></div>
     <div style="display:flex;gap:0.4rem;margin-top:0.75rem;align-items:flex-end;flex-wrap:wrap;">
       <div style="flex:1.5;min-width:90px;">
-        <div style="font-size:0.72rem;color:var(--text2);margin-bottom:0.3rem;font-family:'DM Mono',monospace;">Label (optional)</div>
+        <div style="font-size:0.72rem;color:var(--text2);margin-bottom:0.3rem;font-family:'DM Mono',monospace;">Item <span style="color:var(--red);">*</span></div>
         <input type="text" id="new-conv-label-page" placeholder="e.g. Telur"/>
       </div>
       <div style="flex:1;min-width:70px;">
-        <div style="font-size:0.72rem;color:var(--text2);margin-bottom:0.3rem;font-family:'DM Mono',monospace;">Unit name</div>
-        <input type="text" id="new-conv-unit-page" placeholder="e.g. butir"/>
-      </div>
-      <div style="flex:1;min-width:60px;">
-        <div style="font-size:0.72rem;color:var(--text2);margin-bottom:0.3rem;font-family:'DM Mono',monospace;">= grams/ml</div>
+        <div style="font-size:0.72rem;color:var(--text2);margin-bottom:0.3rem;font-family:'DM Mono',monospace;">1 pcs =</div>
         <input type="number" id="new-conv-grams-page" placeholder="60" min="0" step="any"/>
+      </div>
+      <div style="flex:1;min-width:80px;">
+        <div style="font-size:0.72rem;color:var(--text2);margin-bottom:0.3rem;font-family:'DM Mono',monospace;">Unit</div>
+        <select id="new-conv-unit-page">
+          <option value="g">g (gram)</option>
+          <option value="ml">ml</option>
+          <option value="kg">kg</option>
+          <option value="L">L</option>
+          <option value="pcs">pcs</option>
+          <option value="tbsp">tbsp</option>
+          <option value="tsp">tsp</option>
+          <option value="cup">cup</option>
+        </select>
       </div>
       <button class="btn btn-ghost btn-sm" onclick="addUnitConversionPage()" style="align-self:flex-end;">+ Add</button>
     </div>
@@ -737,6 +768,14 @@
       <div style="font-size:0.72rem;color:var(--text3);font-family:'DM Mono',monospace;margin-bottom:0.3rem;">CURRENT STOCK</div>
       <div style="font-size:1.4rem;font-weight:700;color:var(--accent);" id="inv-reduce-current">—</div>
     </div>
+    <div class="form-group" style="margin-bottom:0.75rem;">
+      <label>Alasan Reduce</label>
+      <select id="inv-reduce-reason" onchange="updateReduceReasonUI()">
+        <option value="used">Digunakan (masak/konsumsi)</option>
+        <option value="expired">Expired / Basi 🗑</option>
+        <option value="other">Lainnya</option>
+      </select>
+    </div>
     <div class="form-row">
       <div class="form-group">
         <label>Reduce by</label>
@@ -749,12 +788,28 @@
       </div>
     </div>
     <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:0.5rem 0.75rem;margin-bottom:1rem;font-size:0.8rem;color:var(--text2);" id="inv-reduce-remaining-preview">Remaining after: —</div>
-    <div style="font-size:0.82rem;font-weight:700;color:var(--text);margin-bottom:0.5rem;">Who took this? <span style="font-weight:400;font-size:0.75rem;color:var(--text3);">(optional)</span></div>
-    <div id="inv-reduce-family-rows" style="margin-bottom:0.75rem;"></div>
+    <div id="inv-reduce-used-section">
+      <div style="font-size:0.82rem;font-weight:700;color:var(--text);margin-bottom:0.5rem;">Who took this? <span style="font-weight:400;font-size:0.75rem;color:var(--text3);">(optional)</span></div>
+      <div id="inv-reduce-family-rows" style="margin-bottom:0.75rem;"></div>
+    </div>
+    <div id="inv-reduce-expired-note" style="display:none;background:rgba(224,96,112,0.07);border:1px solid rgba(224,96,112,0.2);border-radius:8px;padding:0.6rem 0.85rem;margin-bottom:0.75rem;">
+      <div style="font-size:0.78rem;color:var(--red);font-weight:600;">🗑 Reduce karena Expired/Basi</div>
+      <div style="font-size:0.72rem;color:var(--text2);margin-top:0.2rem;">Item akan dicatat sebagai waste. Lihat riwayat di tombol "Lihat Basi/Expired" di halaman Inventory.</div>
+    </div>
     <div class="form-actions">
       <button class="btn btn-ghost" onclick="closeModal('modal-inventory-reduce')">Cancel</button>
       <button class="btn btn-primary" onclick="saveInventoryReduce()">✓ Confirm Reduce</button>
     </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-expired-log">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header">
+      <div><div class="modal-title">🗑 Riwayat Item Basi / Expired</div><div style="font-size:0.72rem;color:var(--text3);margin-top:0.2rem;">Item yang di-reduce karena expired atau basi</div></div>
+      <button class="modal-close" onclick="closeModal('modal-expired-log')">✕</button>
+    </div>
+    <div id="expired-log-list"><div class="empty-state"><div class="empty-icon">🗑</div><p>Belum ada riwayat item basi/expired.</p></div></div>
   </div>
 </div>
 
@@ -1239,7 +1294,7 @@ let firestoreDB = firebase.firestore();
 // STATE
 // ============================================================
 let USERNAME = '';
-let db = { inventory: [], ingredientsDB: [], cooking: [], meals: [], spending: [], familyEating: [], mealPlan: [] };
+let db = { inventory: [], ingredientsDB: [], cooking: [], meals: [], spending: [], familyEating: [], mealPlan: [], expiredLog: [] };
 let cookingIngredients = [];
 let currentEditId = null;
 let familyAteTarget = null;
@@ -1545,7 +1600,7 @@ async function fbDelete(collection, docId) {
 }
 
 async function loadAllData() {
-  const [inventory, ingredientsDB, cooking, meals, spending, familyEating, mealPlan] = await Promise.all([
+  const [inventory, ingredientsDB, cooking, meals, spending, familyEating, mealPlan, expiredLog] = await Promise.all([
     fbGetAll('inventory'),
     fbGetAll('ingredientsDB'),
     fbGetAll('cooking'),
@@ -1553,6 +1608,7 @@ async function loadAllData() {
     fbGetAll('spending'),
     fbGetAll('familyEating'),
     fbGetAll('mealPlan'),
+    fbGetAll('expiredLog'),
   ]);
   db.inventory     = inventory;
   db.ingredientsDB = ingredientsDB;
@@ -1561,6 +1617,7 @@ async function loadAllData() {
   db.spending      = spending;
   db.familyEating  = familyEating;
   db.mealPlan      = mealPlan;
+  db.expiredLog    = expiredLog;
   renderAll();
 }
 
@@ -1734,29 +1791,53 @@ function getFreshnessStatus(item) {
   if (days <= 15) return 'soon';
   return 'old';
 }
+function invSetSort(col) {
+  document.getElementById('inv-sort').value = col;
+  renderInventory();
+}
+function invToggleFilterPanel(id, e) {
+  e.stopPropagation();
+  const panel = document.getElementById(id);
+  if (!panel) return;
+  const isOpen = panel.classList.contains('open');
+  document.querySelectorAll('.col-filter-panel').forEach(p => p.classList.remove('open'));
+  if (!isOpen) panel.classList.add('open');
+}
+function invCloseFilterPanel(id) {
+  const panel = document.getElementById(id);
+  if (panel) panel.classList.remove('open');
+}
+// Close filter panels when clicking outside — but not when clicking inside a panel
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.col-filter-panel') && !e.target.closest('.col-filter-btn')) {
+    document.querySelectorAll('.col-filter-panel').forEach(p => p.classList.remove('open'));
+  }
+});
 function renderInventory() {
-  const search = document.getElementById('inv-search')?.value.toLowerCase() || '';
-  const filter = document.getElementById('inv-filter')?.value || 'available';
-  const sort   = document.getElementById('inv-sort')?.value || 'date';
+  const search    = document.getElementById('inv-search')?.value.toLowerCase() || '';
+  const filter    = document.getElementById('inv-filter')?.value || 'available';
+  const sort      = document.getElementById('inv-sort')?.value || 'date';
+  const catFilter = (document.getElementById('inv-filter-cat')?.value || '').toLowerCase();
 
   let items = db.inventory.filter(i => {
     const matchSearch = i.name.toLowerCase().includes(search);
+    const matchCat = !catFilter || (i.category||'').toLowerCase() === catFilter;
     const qty    = Number(i.qty);
     const isHabis = qty <= 0;
     const status = getFreshnessStatus(i);
 
-    if (filter === 'available') return matchSearch && !isHabis;
-    if (filter === 'habis')     return matchSearch && isHabis;
-    if (filter === 'all')       return matchSearch;
+    if (filter === 'available') return matchSearch && matchCat && !isHabis;
+    if (filter === 'habis')     return matchSearch && matchCat && isHabis;
+    if (filter === 'all')       return matchSearch && matchCat;
     if (filter === 'expiring')  {
       const dLeft = getDaysUntilExpiry(i.expiryDate);
-      return matchSearch && !isHabis && dLeft !== null && dLeft >= 0 && dLeft <= 3;
+      return matchSearch && matchCat && !isHabis && dLeft !== null && dLeft >= 0 && dLeft <= 3;
     }
     if (filter === 'expired')   {
       const dLeft = getDaysUntilExpiry(i.expiryDate);
-      return matchSearch && !isHabis && dLeft !== null && dLeft < 0;
+      return matchSearch && matchCat && !isHabis && dLeft !== null && dLeft < 0;
     }
-    return matchSearch && getFreshnessStatus(i) === filter && !isHabis;
+    return matchSearch && matchCat && getFreshnessStatus(i) === filter && !isHabis;
   });
 
   // Sort
@@ -1774,8 +1855,57 @@ function renderInventory() {
   }
   const statusMap = { fresh:'🟢 Fresh', mid:'🟡 Exp. soon', soon:'🟠 Exp. in 2d', expired:'🔴 Expired', old:'🔴 Very old', unknown:'—' };
   const badgeMap  = { fresh:'badge-green', mid:'badge-blue', soon:'badge-orange', expired:'badge-red', old:'badge-red', unknown:'badge-grey' };
+
+  function sortArrow(col) {
+    if (sort !== col) return `<span class="sort-indicator">↕</span>`;
+    return `<span class="sort-indicator active">↑</span>`;
+  }
+
+  const activeCatFilter = catFilter ? 'active' : '';
+  const activeStatusFilter = (filter !== 'available') ? 'active' : '';
+  // Render panels into the anchor (outside scroll area so they stay visible)
+  const anchor = document.getElementById('inv-panel-anchor');
+  if (anchor) {
+    anchor.innerHTML = `
+    <div id="inv-col-cat-panel" class="col-filter-panel" style="top:0.25rem;left:0;">
+      <div style="font-size:0.68rem;color:var(--text3);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.3rem;">Filter Kategori</div>
+      <select onchange="document.getElementById('inv-filter-cat').value=this.value;invCloseFilterPanel('inv-col-cat-panel');renderInventory();">
+        <option value="" ${!catFilter?'selected':''}>Semua</option>
+        <option value="sayuran" ${catFilter==='sayuran'?'selected':''}>Sayuran</option>
+        <option value="buah" ${catFilter==='buah'?'selected':''}>Buah</option>
+        <option value="protein/daging" ${catFilter==='protein/daging'?'selected':''}>Protein/Daging</option>
+        <option value="seafood" ${catFilter==='seafood'?'selected':''}>Seafood</option>
+        <option value="dairy/telur" ${catFilter==='dairy/telur'?'selected':''}>Dairy/Telur</option>
+        <option value="bumbu dapur" ${catFilter==='bumbu dapur'?'selected':''}>Bumbu Dapur</option>
+        <option value="karbohidrat/biji" ${catFilter==='karbohidrat/biji'?'selected':''}>Karbohidrat/Biji</option>
+        <option value="minyak/lemak" ${catFilter==='minyak/lemak'?'selected':''}>Minyak/Lemak</option>
+        <option value="snacks" ${catFilter==='snacks'?'selected':''}>Snacks</option>
+        <option value="minuman" ${catFilter==='minuman'?'selected':''}>Minuman</option>
+        <option value="lainnya" ${catFilter==='lainnya'?'selected':''}>Lainnya</option>
+      </select>
+    </div>
+    <div id="inv-col-status-panel" class="col-filter-panel" style="top:0.25rem;left:0;">
+      <div style="font-size:0.68rem;color:var(--text3);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.3rem;">Filter Status</div>
+      <select onchange="document.getElementById('inv-filter').value=this.value||'available';invCloseFilterPanel('inv-col-status-panel');renderInventory();">
+        <option value="available" ${filter==='available'?'selected':''}>✅ Ada</option>
+        <option value="all" ${filter==='all'?'selected':''}>Semua</option>
+        <option value="fresh" ${filter==='fresh'?'selected':''}>🟢 Fresh</option>
+        <option value="mid" ${filter==='mid'?'selected':''}>🟡 Mid</option>
+        <option value="expiring" ${filter==='expiring'?'selected':''}>🟠 Expiring</option>
+        <option value="expired" ${filter==='expired'?'selected':''}>🔴 Expired</option>
+        <option value="habis" ${filter==='habis'?'selected':''}>🚫 Habis</option>
+      </select>
+    </div>`;
+  }
+
   wrap.innerHTML = `<table class="data-table"><thead><tr>
-    <th>Item</th><th>Qty</th><th>Kategori</th><th>Dibeli</th><th>Exp. Date</th><th>Status</th><th>Notes</th><th>Actions</th>
+    <th class="inv-th" onclick="invSetSort('name')">Item ${sortArrow('name')}</th>
+    <th class="inv-th" onclick="invSetSort('date')">Qty ${sortArrow('date')}</th>
+    <th style="white-space:nowrap;">Kategori <button class="col-filter-btn ${activeCatFilter}" title="Filter kategori" onclick="invToggleFilterPanel('inv-col-cat-panel',event)">⊟</button></th>
+    <th class="inv-th" onclick="invSetSort('date')">Dibeli ${sortArrow('date')}</th>
+    <th>Exp. Date</th>
+    <th style="white-space:nowrap;">Status <button class="col-filter-btn ${activeStatusFilter}" title="Filter status" onclick="invToggleFilterPanel('inv-col-status-panel',event)">⊟</button></th>
+    <th>Notes</th><th>Actions</th>
   </tr></thead><tbody>${items.map(i => {
     const qty    = Number(i.qty);
     const isHabis = qty <= 0;
@@ -1874,6 +2004,8 @@ function openInventoryReduce(id) {
   document.getElementById('inv-reduce-unit-display').value = item.unit;
   document.getElementById('inv-reduce-qty').value = '';
   document.getElementById('inv-reduce-remaining-preview').textContent = 'Remaining after: —';
+  const reasonEl = document.getElementById('inv-reduce-reason');
+  if (reasonEl) { reasonEl.value = 'used'; updateReduceReasonUI(); }
 
   // Build family rows (same pattern as Family Ate)
   const rows = document.getElementById('inv-reduce-family-rows');
@@ -1895,6 +2027,37 @@ function openInventoryReduce(id) {
       </div>`).join('');
   }
   openModal('modal-inventory-reduce');
+}
+
+function updateReduceReasonUI() {
+  const reason = document.getElementById('inv-reduce-reason')?.value;
+  const usedSection = document.getElementById('inv-reduce-used-section');
+  const expiredNote = document.getElementById('inv-reduce-expired-note');
+  if (reason === 'expired') {
+    if (usedSection) usedSection.style.display = 'none';
+    if (expiredNote) expiredNote.style.display = 'block';
+  } else {
+    if (usedSection) usedSection.style.display = 'block';
+    if (expiredNote) expiredNote.style.display = 'none';
+  }
+}
+
+function openExpiredLog() {
+  const logs = (db.expiredLog || []).slice().sort((a,b) => (b.date||'').localeCompare(a.date||''));
+  const listEl = document.getElementById('expired-log-list');
+  if (!logs.length) {
+    listEl.innerHTML = '<div class="empty-state"><div class="empty-icon">🗑</div><p>Belum ada riwayat item basi/expired.</p></div>';
+  } else {
+    listEl.innerHTML = `<table class="data-table"><thead><tr>
+      <th>Item</th><th>Qty</th><th>Tanggal</th><th>Alasan</th>
+    </tr></thead><tbody>${logs.map(l => `<tr>
+      <td><strong>${esc(l.name)}</strong></td>
+      <td style="font-family:'DM Mono',monospace;">${l.qty} ${esc(l.unit)}</td>
+      <td style="font-size:0.72rem;color:var(--text2);">${l.date}</td>
+      <td><span class="badge badge-red">🗑 ${esc(l.reason==='expired'?'Expired/Basi':'Lainnya')}</span></td>
+    </tr>`).join('')}</tbody></table>`;
+  }
+  openModal('modal-expired-log');
 }
 
 function stepReduceQty(memberId, delta) {
@@ -1925,29 +2088,44 @@ async function saveInventoryReduce() {
   if (!reduceTarget) return;
   const qty = Number(document.getElementById('inv-reduce-qty').value);
   if (!qty || qty <= 0) { showToast('Enter amount to reduce', 'error'); return; }
+  const reason = document.getElementById('inv-reduce-reason')?.value || 'used';
   const newQty = Math.max(0, Number(reduceTarget.qty) - qty);
   const res = await fbUpdate('inventory', reduceTarget.id, { qty: Math.round(newQty * 1000) / 1000 });
   if (!res.ok) { showToast('Failed to update', 'error'); return; }
   reduceTarget.qty = newQty;
-  // Log family eating from inventory if family members selected
-  const totalFamilySrv = Object.values(reduceFamilyQty).reduce((s,v)=>s+v,0);
-  if (totalFamilySrv > 0 && familyMembers.length) {
-    const record = {
-      id: uid(), cookingId: null, dish: reduceTarget.name + ' (inventory)',
-      date: todayLocal(), total: totalFamilySrv, perSrvKcal: 0, isInventoryReduce: true,
-      inventoryId: reduceTarget.id, reduceQty: qty, reduceUnit: reduceTarget.unit,
-      members: Object.entries(reduceFamilyQty).filter(([,v])=>v>0).map(([id,srv]) => {
-        const m = familyMembers.find(x=>x.id===id) || { name:'Others', role:'guest' };
-        return { id, name: m.name, role: m.role||'', servings: srv, kcal: 0 };
-      }),
+
+  // If expired/basi, save to expiredLog
+  if (reason === 'expired') {
+    if (!db.expiredLog) db.expiredLog = [];
+    const logEntry = {
+      id: uid(), name: reduceTarget.name, qty, unit: reduceTarget.unit,
+      date: todayLocal(), reason: 'expired', inventoryId: reduceTarget.id,
       loggedBy: USERNAME,
     };
-    await fbAdd('familyEating', record);
-    db.familyEating.push(record);
+    await fbAdd('expiredLog', logEntry);
+    db.expiredLog.push(logEntry);
+  } else {
+    // Log family eating from inventory if family members selected
+    const totalFamilySrv = Object.values(reduceFamilyQty).reduce((s,v)=>s+v,0);
+    if (totalFamilySrv > 0 && familyMembers.length) {
+      const record = {
+        id: uid(), cookingId: null, dish: reduceTarget.name + ' (inventory)',
+        date: todayLocal(), total: totalFamilySrv, perSrvKcal: 0, isInventoryReduce: true,
+        inventoryId: reduceTarget.id, reduceQty: qty, reduceUnit: reduceTarget.unit,
+        members: Object.entries(reduceFamilyQty).filter(([,v])=>v>0).map(([id,srv]) => {
+          const m = familyMembers.find(x=>x.id===id) || { name:'Others', role:'guest' };
+          return { id, name: m.name, role: m.role||'', servings: srv, kcal: 0 };
+        }),
+        loggedBy: USERNAME,
+      };
+      await fbAdd('familyEating', record);
+      db.familyEating.push(record);
+    }
   }
   closeModal('modal-inventory-reduce');
   renderInventory();
-  showToast(`${reduceTarget.name}: −${qty} ${reduceTarget.unit} ✓`, 'success');
+  const reasonLabel = reason === 'expired' ? ' (expired/basi)' : '';
+  showToast(`${reduceTarget.name}: −${qty} ${reduceTarget.unit}${reasonLabel} ✓`, 'success');
 }
 
 // ── Settings Page ─────────────────────────────────────────────
@@ -2015,18 +2193,20 @@ function renderUnitConversionListPage() {
 
 async function addUnitConversionPage() {
   const label = document.getElementById('new-conv-label-page').value.trim();
-  const unit  = document.getElementById('new-conv-unit-page').value.trim().toLowerCase();
+  const unit  = document.getElementById('new-conv-unit-page').value;
   const grams = Number(document.getElementById('new-conv-grams-page').value);
-  if (!unit) { showToast('Enter a unit name', 'error'); return; }
+  if (!label) { showToast('Item name is required', 'error'); return; }
   if (!grams || grams <= 0) { showToast('Enter a valid gram value', 'error'); return; }
-  if (unitConversions.find(c => c.unit === unit)) { showToast(`Unit "${unit}" already exists`, 'error'); return; }
+  // Fix #2: uniqueness is per label, not per unit — same unit type can exist for different items
+  if (unitConversions.find(c => c.unit === unit && c.label && c.label.toLowerCase() === label.toLowerCase())) {
+    showToast(`Unit "${unit}" already exists for item "${label}"`, 'error'); return;
+  }
   unitConversions.push({ id: uid(), unit, grams, label });
   await saveUserProfile();
   document.getElementById('new-conv-label-page').value = '';
-  document.getElementById('new-conv-unit-page').value  = '';
   document.getElementById('new-conv-grams-page').value = '';
   renderUnitConversionListPage();
-  showToast(`1 ${unit} = ${grams}g added ✓`, 'success');
+  showToast(`1 ${unit} = ${grams}g added for "${label}" ✓`, 'success');
 }
 
 async function removeUnitConversionPage(id) {
@@ -2144,13 +2324,58 @@ async function saveIngDB() {
     else showToast('Failed to save', 'error');
   }
 }
+let ingDbSort = { col: 'name', dir: 1 };
+let ingDbCatFilter = '';
+function ingDbSetSort(col) {
+  if (ingDbSort.col === col) ingDbSort.dir *= -1;
+  else { ingDbSort.col = col; ingDbSort.dir = 1; }
+  renderIngDB();
+}
+function ingDbSortArrow(col) {
+  if (ingDbSort.col !== col) return `<span class="sort-indicator">↕</span>`;
+  return `<span class="sort-indicator active">${ingDbSort.dir === 1 ? '↑' : '↓'}</span>`;
+}
 function renderIngDB() {
   const search = document.getElementById('ingdb-search')?.value.toLowerCase() || '';
-  let items = db.ingredientsDB.filter(i => i.name.toLowerCase().includes(search));
+  let items = db.ingredientsDB.filter(i => i.name.toLowerCase().includes(search) && (!ingDbCatFilter || (i.category||'').toLowerCase() === ingDbCatFilter));
+  // Sort
+  items.sort((a,b) => {
+    let av = a[ingDbSort.col] ?? ''; let bv = b[ingDbSort.col] ?? '';
+    if (typeof av === 'string') return av.localeCompare(bv) * ingDbSort.dir;
+    return (Number(av) - Number(bv)) * ingDbSort.dir;
+  });
   const wrap = document.getElementById('ingdb-table-wrap');
   if (!items.length) { wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><p>No ingredients in database.</p></div>'; return; }
+  const activeCat = ingDbCatFilter ? 'active' : '';
+  const ingDbAnchor = document.getElementById('ingdb-panel-anchor');
+  if (ingDbAnchor) {
+    ingDbAnchor.innerHTML = `
+    <div id="ingdb-cat-panel" class="col-filter-panel" style="top:0.25rem;left:0;">
+      <div style="font-size:0.68rem;color:var(--text3);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.3rem;">Filter Category</div>
+      <select onchange="ingDbCatFilter=this.value;invCloseFilterPanel('ingdb-cat-panel');renderIngDB();">
+        <option value="" ${!ingDbCatFilter?'selected':''}>All</option>
+        <option value="protein" ${ingDbCatFilter==='protein'?'selected':''}>Protein</option>
+        <option value="vegetable" ${ingDbCatFilter==='vegetable'?'selected':''}>Vegetable</option>
+        <option value="fruit" ${ingDbCatFilter==='fruit'?'selected':''}>Fruit</option>
+        <option value="grain/carb" ${ingDbCatFilter==='grain/carb'?'selected':''}>Grain/Carb</option>
+        <option value="dairy" ${ingDbCatFilter==='dairy'?'selected':''}>Dairy</option>
+        <option value="fat/oil" ${ingDbCatFilter==='fat/oil'?'selected':''}>Fat/Oil</option>
+        <option value="spice/herb" ${ingDbCatFilter==='spice/herb'?'selected':''}>Spice/Herb</option>
+        <option value="bumbu dapur" ${ingDbCatFilter==='bumbu dapur'?'selected':''}>Bumbu Dapur</option>
+        <option value="beverage" ${ingDbCatFilter==='beverage'?'selected':''}>Beverage</option>
+        <option value="other" ${ingDbCatFilter==='other'?'selected':''}>Other</option>
+      </select>
+    </div>`;
+  }
   wrap.innerHTML = `<table class="data-table"><thead><tr>
-    <th>Name</th><th>Category</th><th>Cal/100g</th><th>Protein/100g</th><th>Fat/100g</th><th>Carbs/100g</th><th>Fiber/100g</th><th>Actions</th>
+    <th class="inv-th" onclick="ingDbSetSort('name')">Name ${ingDbSortArrow('name')}</th>
+    <th style="white-space:nowrap;">Category <button class="col-filter-btn ${activeCat}" title="Filter kategori" onclick="invToggleFilterPanel('ingdb-cat-panel',event)">⊟</button></th>
+    <th class="inv-th" onclick="ingDbSetSort('cal')">Cal/100g ${ingDbSortArrow('cal')}</th>
+    <th class="inv-th" onclick="ingDbSetSort('protein')">Protein ${ingDbSortArrow('protein')}</th>
+    <th class="inv-th" onclick="ingDbSetSort('fat')">Fat ${ingDbSortArrow('fat')}</th>
+    <th class="inv-th" onclick="ingDbSetSort('carbs')">Carbs ${ingDbSortArrow('carbs')}</th>
+    <th class="inv-th" onclick="ingDbSetSort('fiber')">Fiber ${ingDbSortArrow('fiber')}</th>
+    <th>Actions</th>
   </tr></thead><tbody>${items.map(i => `<tr>
     <td><strong>${esc(i.name)}</strong></td>
     <td><span class="badge badge-grey">${esc(i.category)}</span></td>
@@ -2340,6 +2565,10 @@ async function saveCooking() {
     } else showToast('Failed to save', 'error');
   }
 }
+function cookSortNextDir(asc, desc) {
+  const cur = document.getElementById('cook-sort')?.value;
+  return cur === asc ? desc : asc;
+}
 function renderCooking() {
   const filterVal = document.getElementById('cook-filter')?.value || 'all';
   const sortVal   = document.getElementById('cook-sort')?.value   || 'date';
@@ -2358,12 +2587,40 @@ function renderCooking() {
   // Sort
   if (sortVal === 'avail-desc') items.sort((a,b) => b._avail - a._avail);
   else if (sortVal === 'avail-asc') items.sort((a,b) => a._avail - b._avail);
+  else if (sortVal === 'dish-az') items.sort((a,b) => (a.dish||'').localeCompare(b.dish||''));
+  else if (sortVal === 'dish-za') items.sort((a,b) => (b.dish||'').localeCompare(a.dish||''));
+  else if (sortVal === 'cal-desc') items.sort((a,b) => b.cal - a.cal);
   else items.sort((a,b) => (b.date||'').localeCompare(a.date||''));
 
   if (!items.length) { wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">🍳</div><p>Tidak ada data.</p></div>'; return; }
 
+  // Sort indicators for column headers
+  function cookSortArrow(asc, desc) {
+    if (sortVal === asc) return `<span class="sort-indicator active">↑</span>`;
+    if (sortVal === desc) return `<span class="sort-indicator active">↓</span>`;
+    return `<span class="sort-indicator">↕</span>`;
+  }
+  const activeServFilter = (filterVal !== 'all') ? 'active' : '';
+  const cookAnchor = document.getElementById('cook-panel-anchor');
+  if (cookAnchor) {
+    cookAnchor.innerHTML = `
+    <div id="cook-sisa-panel" class="col-filter-panel" style="top:0.25rem;left:0;">
+      <div style="font-size:0.68rem;color:var(--text3);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.3rem;">Filter Sisa Serv</div>
+      <select onchange="document.getElementById('cook-filter').value=this.value;invCloseFilterPanel('cook-sisa-panel');renderCooking();">
+        <option value="all" ${filterVal==='all'?'selected':''}>Semua</option>
+        <option value="available" ${filterVal==='available'?'selected':''}>Ada sisa serving</option>
+        <option value="habis" ${filterVal==='habis'?'selected':''}>🚫 Habis</option>
+      </select>
+    </div>`;
+  }
+
   wrap.innerHTML = `<table class="data-table"><thead><tr>
-    <th>Dish</th><th>Date</th><th>Total Srv</th><th>Sisa Srv</th><th>Total Cal</th><th>Per Srv</th><th>Ingredients</th><th>By</th><th>Actions</th>
+    <th class="inv-th" onclick="document.getElementById('cook-sort').value=cookSortNextDir('dish-az','dish-za');renderCooking()">Dish ${cookSortArrow('dish-az','dish-za')}</th>
+    <th class="inv-th" onclick="document.getElementById('cook-sort').value='date';renderCooking()">Date ${sortVal==='date'?'<span class=\'sort-indicator active\'>↓</span>':'<span class=\'sort-indicator\'>↕</span>'}</th>
+    <th>Total Srv</th>
+    <th style="white-space:nowrap;">Sisa Srv <button class="col-filter-btn ${activeServFilter}" title="Filter sisa serving" onclick="invToggleFilterPanel('cook-sisa-panel',event)">⊟</button></th>
+    <th class="inv-th" onclick="document.getElementById('cook-sort').value='cal-desc';renderCooking()">Total Cal ${sortVal==='cal-desc'?'<span class=\'sort-indicator active\'>↓</span>':'<span class=\'sort-indicator\'>↕</span>'}</th>
+    <th>Per Srv</th><th>Ingredients</th><th>By</th><th>Actions</th>
   </tr></thead><tbody>${items.map(i => {
     let ings = [];
     try { ings = JSON.parse(i.ingredients); } catch(e) {}
@@ -2756,6 +3013,9 @@ function macroBar(label, val, max, unit, color) {
 async function initWater() {
   const today = todayLocal();
   document.getElementById('water-date-label').textContent = `${today} (${offsetToLabel(tzOffset)})`;
+  // Always reload water from Firestore to ensure persistence across sessions
+  await loadWaterToday();
+  // If no data for today exists, start fresh but preserve goal
   if (waterData.date !== today) {
     waterData = { ml: 0, goal: waterData.goal||2000, date: today };
   }
