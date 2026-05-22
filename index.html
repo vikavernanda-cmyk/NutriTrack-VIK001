@@ -205,6 +205,35 @@
   #toast.success { background: var(--green); color: #1a5a30; }
   #toast.error { background: var(--red); color: #fff; }
 
+/* ── TODAY SUMMARY CARD ── */
+  .today-summary { background: linear-gradient(135deg, rgba(232,146,106,0.08) 0%, rgba(122,180,232,0.06) 100%); border: 1px solid var(--border2); border-radius: var(--r); padding: 1rem; margin-bottom: 1rem; }
+  .today-summary-title { font-size: 0.72rem; font-weight: 700; color: var(--text3); font-family: 'DM Mono', monospace; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 0.75rem; }
+  .ts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+  @media (max-width: 540px) { .ts-grid { grid-template-columns: 1fr; } }
+  .ts-item { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 0.65rem 0.75rem; }
+  .ts-label { font-size: 0.68rem; color: var(--text3); font-family: 'DM Mono', monospace; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem; }
+  .ts-value { font-size: 1rem; font-weight: 700; color: var(--text); font-family: 'DM Mono', monospace; line-height: 1.2; }
+  .ts-sub { font-size: 0.7rem; margin-top: 0.2rem; font-family: 'DM Mono', monospace; }
+  .ts-ok { color: var(--green); }
+  .ts-warn { color: var(--orange); }
+  .ts-over { color: var(--red); }
+  /* ── ENHANCED MACRO BARS ── */
+  .macro-row-v2 { display: flex; flex-direction: column; gap: 0.2rem; margin-bottom: 0.65rem; }
+  .macro-row-v2:last-child { margin-bottom: 0; }
+  .macro-header-v2 { display: flex; justify-content: space-between; align-items: baseline; }
+  .macro-label-v2 { font-size: 0.75rem; font-weight: 600; color: var(--text); }
+  .macro-nums-v2 { font-size: 0.7rem; color: var(--text2); font-family: 'DM Mono', monospace; }
+  .macro-bar-v2 { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+  .macro-fill-v2 { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+  .macro-sub-v2 { font-size: 0.68rem; font-family: 'DM Mono', monospace; }
+  /* ── EXPIRING INSIGHT CARD ── */
+  .expiring-item { display: flex; align-items: center; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px solid var(--border); font-size: 0.8rem; }
+  .expiring-item:last-child { border-bottom: none; }
+  .expiring-name { font-weight: 600; color: var(--text); }
+  .expiring-days { font-size: 0.68rem; font-family: 'DM Mono', monospace; }
+  /* ── WATER STATUS TEXT ── */
+  .water-status-txt { font-size: 0.78rem; font-weight: 600; font-family: 'DM Mono', monospace; text-align: center; margin-top: 0.3rem; }
+
 /* ── DIVIDER ── */
   .divider { border: none; border-top: 1px solid var(--border); margin: 1rem 0; }
 
@@ -434,7 +463,6 @@
         <div class="section-desc" id="dash-date-display">Here's your nutrition &amp; food overview for today.</div>
       </div>
       <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
-        <!-- Date navigator -->
         <div style="display:flex;align-items:center;gap:0.3rem;background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);padding:0.3rem 0.5rem;">
           <button class="btn btn-ghost btn-sm" onclick="shiftDashDate(-1)" style="padding:0.25rem 0.55rem;">‹</button>
           <input type="date" id="dash-date-picker" style="border:none;background:transparent;font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--text);width:130px;cursor:pointer;" onchange="onDashDatePick(this.value)"/>
@@ -445,90 +473,137 @@
         <button class="btn btn-ghost btn-sm" onclick="loadAllData()">↻ Refresh</button>
       </div>
     </div>
-    <div class="baseline-card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
-        <div>
-          <div style="font-size:0.85rem;font-weight:700;color:var(--text);">Daily Calorie Baseline</div>
-          <div style="font-size:0.72rem;color:var(--text3);font-family:'DM Mono',monospace;">Your personal targets</div>
-        </div>
-        <button class="btn btn-ghost btn-sm" onclick="toggleBaselineEdit()">✏ Edit</button>
+
+```
+<!-- TODAY SUMMARY -->
+<div class="today-summary" id="today-summary-section">
+  <div class="today-summary-title">📋 Today Summary</div>
+  <div class="ts-grid">
+    <div class="ts-item">
+      <div class="ts-label">🔥 Calories</div>
+      <div class="ts-value" id="ts-cal-val">— / — kcal</div>
+      <div class="ts-sub" id="ts-cal-sub"></div>
+    </div>
+    <div class="ts-item">
+      <div class="ts-label">💪 Protein</div>
+      <div class="ts-value" id="ts-prot-val">— / — g</div>
+      <div class="ts-sub" id="ts-prot-sub"></div>
+    </div>
+    <div class="ts-item">
+      <div class="ts-label">💧 Water</div>
+      <div class="ts-value" id="ts-water-val">— / — ml</div>
+      <div class="ts-sub" id="ts-water-sub"></div>
+    </div>
+    <div class="ts-item">
+      <div class="ts-label">⚠️ Inventory</div>
+      <div class="ts-value" id="ts-inv-val">—</div>
+      <div class="ts-sub" id="ts-inv-sub"></div>
+    </div>
+  </div>
+</div>
+
+<!-- BASELINE & STREAK -->
+<div class="grid-2" style="margin-bottom:1rem;">
+  <div class="baseline-card" style="margin-bottom:0;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
+      <div>
+        <div style="font-size:0.85rem;font-weight:700;color:var(--text);">Daily Targets</div>
+        <div style="font-size:0.72rem;color:var(--text3);font-family:'DM Mono',monospace;">Your personal baseline</div>
       </div>
-      <div id="baseline-display">
-        <div style="margin-bottom:0.4rem;">
-          <span class="baseline-label">Calories:</span>
-          <span class="baseline-val" id="bl-cal-disp" style="font-size:1.35rem;color:var(--accent2);">2000</span>
-          <span style="font-size:0.78rem;color:var(--text3);">kcal</span>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.1rem 0.5rem;">
-          <div><span class="baseline-label" style="display:inline-block;width:52px;">Protein:</span><span class="baseline-val" id="bl-prot-disp">150</span><span style="font-size:0.72rem;color:var(--text3);"> g</span></div>
-          <div><span class="baseline-label" style="display:inline-block;width:42px;">Carbs:</span><span class="baseline-val" id="bl-carbs-disp">250</span><span style="font-size:0.72rem;color:var(--text3);"> g</span></div>
-          <div><span class="baseline-label" style="display:inline-block;width:52px;">Fat:</span><span class="baseline-val" id="bl-fat-disp">65</span><span style="font-size:0.72rem;color:var(--text3);"> g</span></div>
-          <div><span class="baseline-label" style="display:inline-block;width:42px;">Fiber:</span><span class="baseline-val" id="bl-fiber-disp">30</span><span style="font-size:0.72rem;color:var(--text3);"> g</span></div>
-        </div>
+      <button class="btn btn-ghost btn-sm" onclick="toggleBaselineEdit()">✏ Edit</button>
+    </div>
+    <div id="baseline-display">
+      <div style="margin-bottom:0.4rem;">
+        <span class="baseline-label">Calories:</span>
+        <span class="baseline-val" id="bl-cal-disp" style="font-size:1.35rem;color:var(--accent2);">2,000</span>
+        <span style="font-size:0.78rem;color:var(--text3);"> kcal</span>
       </div>
-      <div id="baseline-edit" style="display:none;">
-        <div class="baseline-inputs">
-          <div class="form-group" style="margin-bottom:0.5rem;"><label>Calories (kcal)</label><input type="number" id="bl-cal" placeholder="2000" value="2000"/></div>
-          <div class="form-group" style="margin-bottom:0.5rem;"><label>Protein (g)</label><input type="number" id="bl-prot" placeholder="150" value="150"/></div>
-          <div class="form-group" style="margin-bottom:0.5rem;"><label>Carbs (g)</label><input type="number" id="bl-carbs" placeholder="250" value="250"/></div>
-          <div class="form-group" style="margin-bottom:0.5rem;"><label>Fat (g)</label><input type="number" id="bl-fat" placeholder="65" value="65"/></div>
-          <div class="form-group" style="margin-bottom:0.5rem;"><label>Fiber (g)</label><input type="number" id="bl-fiber" placeholder="30" value="30"/></div>
-        </div>
-        <button class="btn btn-primary btn-sm" onclick="saveBaseline()">Save Baseline</button>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.1rem 0.5rem;">
+        <div><span class="baseline-label" style="display:inline-block;width:52px;">Protein:</span><span class="baseline-val" id="bl-prot-disp">150</span><span style="font-size:0.72rem;color:var(--text3);"> g</span></div>
+        <div><span class="baseline-label" style="display:inline-block;width:42px;">Carbs:</span><span class="baseline-val" id="bl-carbs-disp">250</span><span style="font-size:0.72rem;color:var(--text3);"> g</span></div>
+        <div><span class="baseline-label" style="display:inline-block;width:52px;">Fat:</span><span class="baseline-val" id="bl-fat-disp">65</span><span style="font-size:0.72rem;color:var(--text3);"> g</span></div>
+        <div><span class="baseline-label" style="display:inline-block;width:42px;">Fiber:</span><span class="baseline-val" id="bl-fiber-disp">30</span><span style="font-size:0.72rem;color:var(--text3);"> g</span></div>
       </div>
     </div>
-    <div class="grid-2" style="margin-bottom:1rem;">
-      <div class="stat-block" style="display:flex;flex-direction:column;align-items:center;text-align:center;"><div class="stat-label">Calories Today</div><div class="stat-value text-accent" id="dash-cal">—</div><div class="stat-change" id="dash-cal-vs-base">kcal consumed</div></div>
-      <div class="stat-block" style="display:flex;flex-direction:column;align-items:center;text-align:center;"><div class="stat-label">🔥 Logging Streak</div><div class="stat-value" id="dash-streak">—</div><div class="stat-change" id="dash-streak-sub">days logged in a row</div></div>
-    </div>
-    <div class="grid-2">
-      <div class="card">
-        <div class="card-header"><div><div class="card-title">Today's Macros</div><div class="card-sub">vs. your daily baseline</div></div></div>
-        <div class="macro-bars" id="dash-macros"><div style="color:var(--text3);font-size:0.8rem;">Log meals to see macros.</div></div>
+    <div id="baseline-edit" style="display:none;">
+      <div class="baseline-inputs">
+        <div class="form-group" style="margin-bottom:0.5rem;"><label>Calories (kcal)</label><input type="number" id="bl-cal" placeholder="2000" value="2000"/></div>
+        <div class="form-group" style="margin-bottom:0.5rem;"><label>Protein (g)</label><input type="number" id="bl-prot" placeholder="150" value="150"/></div>
+        <div class="form-group" style="margin-bottom:0.5rem;"><label>Carbs (g)</label><input type="number" id="bl-carbs" placeholder="250" value="250"/></div>
+        <div class="form-group" style="margin-bottom:0.5rem;"><label>Fat (g)</label><input type="number" id="bl-fat" placeholder="65" value="65"/></div>
+        <div class="form-group" style="margin-bottom:0.5rem;"><label>Fiber (g)</label><input type="number" id="bl-fiber" placeholder="30" value="30"/></div>
       </div>
-      <div class="card">
-        <div class="card-header">
-          <div><div class="card-title">Water Intake 💧</div><div class="card-sub" id="water-date-label"></div></div>
-          <div style="display:flex;gap:0.4rem;">
-            <button class="btn btn-ghost btn-sm" onclick="openModal('modal-bottles')">🍶 Bottles</button>
-            <button class="btn btn-ghost btn-sm" onclick="resetWater()">Reset</button>
-          </div>
+      <button class="btn btn-primary btn-sm" onclick="saveBaseline()">Save Baseline</button>
+    </div>
+  </div>
+  <div class="stat-block" style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;">
+    <div class="stat-label">🔥 Logging Streak</div>
+    <div class="stat-value" id="dash-streak">—</div>
+    <div class="stat-change" id="dash-streak-sub">days logged in a row</div>
+  </div>
+</div>
+
+<!-- MACROS + WATER (side by side) -->
+<div class="grid-2">
+  <div class="card">
+    <div class="card-header"><div><div class="card-title">Today's Macros</div><div class="card-sub">Actual vs. daily target</div></div></div>
+    <div id="dash-macros"><div style="color:var(--text3);font-size:0.8rem;padding:0.5rem 0;">Log meals to see macros.</div></div>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <div><div class="card-title">Water Intake 💧</div><div class="card-sub" id="water-date-label"></div></div>
+      <div style="display:flex;gap:0.4rem;">
+        <button class="btn btn-ghost btn-sm" onclick="openModal('modal-bottles')">🍶 Bottles</button>
+        <button class="btn btn-ghost btn-sm" onclick="resetWater()">Reset</button>
+      </div>
+    </div>
+    <div class="water-widget">
+      <div class="water-ring">
+        <svg class="water-svg" width="140" height="140" viewBox="0 0 140 140">
+          <circle class="water-track" cx="70" cy="70" r="55"/>
+          <circle class="water-fill" id="water-circle" cx="70" cy="70" r="55" stroke-dasharray="345.4" stroke-dashoffset="345.4"/>
+        </svg>
+        <div class="water-center"><div class="water-ml" id="water-ml">0</div><div class="water-goal" id="water-goal-label">/ 2,000 ml</div></div>
+      </div>
+      <div class="water-status-txt" id="water-status-txt"></div>
+      <div class="water-bottle-section"><div class="water-bottle-label">My Bottles</div><div class="water-btns" id="water-bottle-btns"></div></div>
+      <div class="water-bottle-section"><div class="water-bottle-label">Manual</div>
+        <div class="water-manual-section">
+          <button class="btn btn-ghost btn-sm" onclick="addWater(50)">+50 ml</button>
+          <button class="btn btn-ghost btn-sm" onclick="addWater(200)">+200 ml</button>
         </div>
-        <div class="water-widget">
-          <div class="water-ring">
-            <svg class="water-svg" width="140" height="140" viewBox="0 0 140 140">
-              <circle class="water-track" cx="70" cy="70" r="55"/>
-              <circle class="water-fill" id="water-circle" cx="70" cy="70" r="55" stroke-dasharray="345.4" stroke-dashoffset="345.4"/>
-            </svg>
-            <div class="water-center"><div class="water-ml" id="water-ml">0</div><div class="water-goal" id="water-goal-label">/ 2000 ml</div></div>
-          </div>
-          <div class="water-bottle-section"><div class="water-bottle-label">My Bottles</div><div class="water-btns" id="water-bottle-btns"></div></div>
-          <div class="water-bottle-section"><div class="water-bottle-label">Manual</div>
-            <div class="water-manual-section">
-              <button class="btn btn-ghost btn-sm" onclick="addWater(50)">+50 ml</button>
-              <button class="btn btn-ghost btn-sm" onclick="addWater(200)">+200 ml</button>
-            </div>
-          </div>
-          <div class="water-timer" id="water-timer">Next reminder in —</div>
-          <div style="display:flex;gap:0.5rem;align-items:center;font-size:0.75rem;color:var(--text2);">
-            Goal: <input type="number" id="water-goal-input" style="width:80px;padding:0.3rem 0.5rem;" value="2000" onchange="updateWaterGoal(this.value)"/> ml
-          </div>
-        </div>
+      </div>
+      <div class="water-timer" id="water-timer">Next reminder in —</div>
+      <div style="display:flex;gap:0.5rem;align-items:center;font-size:0.75rem;color:var(--text2);">
+        Goal: <input type="number" id="water-goal-input" style="width:80px;padding:0.3rem 0.5rem;" value="2000" onchange="updateWaterGoal(this.value)"/> ml
       </div>
     </div>
-    <div class="card">
-      <div class="card-header"><div class="card-title" id="dash-meals-card-title">Today's Meals</div><button class="btn btn-primary btn-sm" onclick="openMealAdd()">+ Add Meal</button></div>
-      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;"><div id="dash-meals-list"></div></div>
+  </div>
+</div>
+
+<!-- TODAY'S MEALS (no duplicate Add Meal button) -->
+<div class="card">
+  <div class="card-header"><div class="card-title" id="dash-meals-card-title">Today's Meals</div></div>
+  <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;"><div id="dash-meals-list"></div></div>
+</div>
+
+<!-- STOCK / EXPIRING INSIGHT / FAMILY -->
+<div class="grid-3">
+  <div class="stat-block"><div class="stat-label">Items in Stock</div><div class="stat-value" id="dash-stock">—</div><div class="stat-change">ingredients available</div></div>
+  <div class="card" style="padding:0.9rem 1rem;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+      <div class="stat-label" style="margin-bottom:0;">⚠️ Expiring Soon</div>
+      <button class="btn btn-ghost btn-sm" style="font-size:0.7rem;padding:0.2rem 0.55rem;" onclick="switchTab('cooking')">🍳 Cook Now</button>
     </div>
-    <!-- Stock, Expiring, Family at bottom -->
-    <div class="grid-3">
-      <div class="stat-block"><div class="stat-label">Items in Stock</div><div class="stat-value" id="dash-stock">—</div><div class="stat-change">ingredients available</div></div>
-      <div class="stat-block"><div class="stat-label">Expiring Soon</div><div class="stat-value" style="color:var(--orange)" id="dash-expiring">—</div><div class="stat-change">items expire within 3 days</div></div>
-      <div class="stat-block" id="family-today-strip" style="display:none;">
-        <div class="stat-label" style="color:var(--purple);">👨‍👩‍👧 Family Today</div>
-        <div class="family-strip" id="family-strip-cards" style="margin-top:0.35rem;"></div>
-      </div>
-    </div>
+    <div id="dash-expiring-list"></div>
+  </div>
+  <div class="stat-block" id="family-today-strip" style="display:none;">
+    <div class="stat-label" style="color:var(--purple);">👨‍👩‍👧 Family Today</div>
+    <div class="family-strip" id="family-strip-cards" style="margin-top:0.35rem;"></div>
+  </div>
+</div>
+```
+
   </div>
 
   <div id="page-inventory" class="page">
@@ -3056,6 +3131,11 @@ function renderSpending() {
 // ============================================================
 // DASHBOARD
 // ============================================================
+function fmtNum(n, decimals=0) {
+  const v = Math.round(n * Math.pow(10, decimals)) / Math.pow(10, decimals);
+  return v.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+
 function renderDashboard() {
   const today = todayLocal();
   const isToday = dashDate === today;
@@ -3064,25 +3144,21 @@ function renderDashboard() {
   document.getElementById('dash-meals-card-title').textContent = isToday ? "Today's Meals" : `Meals on ${dashDate}`;
   document.getElementById('dash-today-btn').style.opacity = isToday ? '0.4' : '1';
   document.getElementById('dash-next-btn').style.opacity  = isToday ? '0.4' : '1';
+
   const dayMeals = db.meals.filter(m => { if (!m.datetime) return false; return localDateStr(new Date(m.datetime), tzOffset) === dashDate; });
-  const totCal=dayMeals.reduce((s,m)=>s+m.cal,0), totProtein=dayMeals.reduce((s,m)=>s+m.protein,0);
-  const totFat=dayMeals.reduce((s,m)=>s+m.fat,0), totCarbs=dayMeals.reduce((s,m)=>s+m.carbs,0);
-  const totFiber=dayMeals.reduce((s,m)=>s+m.fiber,0);
-  document.getElementById('dash-cal').textContent   = totCal || '0';
-  // Streak: count consecutive days (going back from today) that have at least 1 meal logged
+  const totCal     = dayMeals.reduce((s,m) => s + (m.cal     || 0), 0);
+  const totProtein = dayMeals.reduce((s,m) => s + (m.protein || 0), 0);
+  const totFat     = dayMeals.reduce((s,m) => s + (m.fat     || 0), 0);
+  const totCarbs   = dayMeals.reduce((s,m) => s + (m.carbs   || 0), 0);
+  const totFiber   = dayMeals.reduce((s,m) => s + (m.fiber   || 0), 0);
+
+  // ── Logging Streak ───────────────────────────────────────────
   (function() {
     const realToday = todayLocal();
-    let streak = 0;
-    let checkDate = realToday;
-    const mealDates = new Set(
-      (db.meals || []).filter(m => m.datetime).map(m => localDateStr(new Date(m.datetime), tzOffset))
-    );
+    let streak = 0, checkDate = realToday;
+    const mealDates = new Set((db.meals || []).filter(m => m.datetime).map(m => localDateStr(new Date(m.datetime), tzOffset)));
     while (true) {
-      if (mealDates.has(checkDate)) {
-        streak++;
-        const d = new Date(checkDate); d.setDate(d.getDate() - 1);
-        checkDate = d.toISOString().split('T')[0];
-      } else break;
+      if (mealDates.has(checkDate)) { streak++; const d = new Date(checkDate); d.setDate(d.getDate()-1); checkDate = d.toISOString().split('T')[0]; } else break;
     }
     const streakEl = document.getElementById('dash-streak');
     const streakSub = document.getElementById('dash-streak-sub');
@@ -3092,26 +3168,88 @@ function renderDashboard() {
       if (streakSub) streakSub.textContent = streak === 0 ? 'Log today to start!' : streak === 1 ? 'day — keep going!' : 'days in a row 🔥';
     }
   })();
+
+  // ── Inventory ────────────────────────────────────────────────
   document.getElementById('dash-stock').textContent = db.inventory.filter(i => Number(i.qty)>0).length;
-  document.getElementById('dash-expiring').textContent = db.inventory.filter(i => {
+  const expiringItems = db.inventory.filter(i => {
     if (!i.expiryDate || Number(i.qty) <= 0) return false;
     const diff = Math.round((new Date(i.expiryDate) - new Date(todayLocal())) / 86400000);
     return diff >= 0 && diff <= 3;
-  }).length;
+  });
+  // Expiring insight list
+  const expListEl = document.getElementById('dash-expiring-list');
+  if (expListEl) {
+    if (!expiringItems.length) {
+      expListEl.innerHTML = `<div style="font-size:0.78rem;color:var(--green);font-family:'DM Mono',monospace;">No expiring items ✅</div>`;
+    } else {
+      expListEl.innerHTML = expiringItems.slice(0,5).map(i => {
+        const d = Math.round((new Date(i.expiryDate) - new Date(todayLocal())) / 86400000);
+        const cls = d <= 1 ? 'ts-over' : d <= 2 ? 'ts-warn' : '';
+        return `<div class="expiring-item"><span class="expiring-name">${esc(i.name)}</span><span class="expiring-days ${cls}">${d === 0 ? 'Today!' : d === 1 ? '1 day left' : d + ' days left'}</span></div>`;
+      }).join('');
+    }
+  }
+
   renderFamilyTodayStrip();
-  const calVsBase = baseline.cal > 0 ? `${totCal} / ${baseline.cal} kcal (${Math.round(totCal/baseline.cal*100)}%)` : `${totCal} kcal consumed`;
-  document.getElementById('dash-cal-vs-base').textContent = calVsBase;
+
+  // ── TODAY SUMMARY ────────────────────────────────────────────
+  // Calories
+  const calTarget = baseline.cal || 0;
+  document.getElementById('ts-cal-val').textContent = `${fmtNum(totCal)} / ${fmtNum(calTarget)} kcal`;
+  if (calTarget > 0) {
+    const calDiff = calTarget - totCal;
+    const calEl = document.getElementById('ts-cal-sub');
+    if (calDiff > 0) { calEl.textContent = `Remaining: ${fmtNum(calDiff)} kcal`; calEl.className = 'ts-sub ts-warn'; }
+    else if (calDiff < 0) { calEl.textContent = `Over by: ${fmtNum(-calDiff)} kcal`; calEl.className = 'ts-sub ts-over'; }
+    else { calEl.textContent = 'Target reached ✅'; calEl.className = 'ts-sub ts-ok'; }
+  }
+  // Protein
+  const protTarget = baseline.prot || 0;
+  document.getElementById('ts-prot-val').textContent = `${fmtNum(totProtein, 1)} / ${fmtNum(protTarget)} g`;
+  if (protTarget > 0) {
+    const protDiff = protTarget - totProtein;
+    const protEl = document.getElementById('ts-prot-sub');
+    if (protDiff > 0) { protEl.textContent = `Remaining: ${fmtNum(protDiff, 1)} g`; protEl.className = 'ts-sub ts-warn'; }
+    else if (protDiff < 0) { protEl.textContent = `Exceeded by ${fmtNum(-protDiff, 1)} g`; protEl.className = 'ts-sub ts-over'; }
+    else { protEl.textContent = 'Target reached ✅'; protEl.className = 'ts-sub ts-ok'; }
+  }
+  // Water (uses live waterData)
+  const wGoal = waterData.goal || 2000;
+  const wMl   = waterData.ml  || 0;
+  document.getElementById('ts-water-val').textContent = `${fmtNum(wMl)} / ${fmtNum(wGoal)} ml`;
+  const wDiff = wGoal - wMl;
+  const wSubEl = document.getElementById('ts-water-sub');
+  if (wDiff <= 0) {
+    const over = -wDiff;
+    wSubEl.textContent = over > 0 ? `+${fmtNum(over)} ml above goal` : 'Goal reached ✅';
+    wSubEl.className = 'ts-sub ts-ok';
+  } else { wSubEl.textContent = `Remaining: ${fmtNum(wDiff)} ml`; wSubEl.className = 'ts-sub ts-warn'; }
+  // Inventory alert
+  const invSubEl = document.getElementById('ts-inv-sub');
+  if (expiringItems.length === 0) {
+    document.getElementById('ts-inv-val').textContent = 'No alerts';
+    document.getElementById('ts-inv-val').style.color = '';
+    if (invSubEl) { invSubEl.textContent = 'All good ✅'; invSubEl.className = 'ts-sub ts-ok'; }
+  } else {
+    document.getElementById('ts-inv-val').textContent = `${expiringItems.length} item${expiringItems.length>1?'s':''}`;
+    document.getElementById('ts-inv-val').style.color = 'var(--orange)';
+    if (invSubEl) { invSubEl.textContent = 'Expiring soon ⚠️'; invSubEl.className = 'ts-sub ts-warn'; }
+  }
+
+  // ── MACROS ───────────────────────────────────────────────────
   const macroWrap = document.getElementById('dash-macros');
   if (!dayMeals.length) {
-    macroWrap.innerHTML = `<div style="color:var(--text3);font-size:0.8rem;">No meals logged ${isToday ? 'today' : 'on this day'}.</div>`;
+    macroWrap.innerHTML = `<div style="color:var(--text3);font-size:0.8rem;padding:0.5rem 0;">No meals logged ${isToday ? 'today' : 'on this day'}.</div>`;
   } else {
-    macroWrap.innerHTML = `
-      ${macroBar('Calories', totCal,     baseline.cal,   'kcal', '#e8926a')}
-      ${macroBar('Protein',  totProtein, baseline.prot,  'g',    '#7ecba0')}
-      ${macroBar('Carbs',    totCarbs,   baseline.carbs, 'g',    '#7ab4e8')}
-      ${macroBar('Fat',      totFat,     baseline.fat,   'g',    '#f0a060')}
-      ${macroBar('Fiber',    totFiber,   baseline.fiber, 'g',    '#b4a0d8')}`;
+    macroWrap.innerHTML =
+      macroBarV2('Calories', totCal,     baseline.cal,   'kcal', '#e8926a') +
+      macroBarV2('Protein',  totProtein, baseline.prot,  'g',    '#7ecba0') +
+      macroBarV2('Carbs',    totCarbs,   baseline.carbs, 'g',    '#7ab4e8') +
+      macroBarV2('Fat',      totFat,     baseline.fat,   'g',    '#f0a060') +
+      macroBarV2('Fiber',    totFiber,   baseline.fiber, 'g',    '#b4a0d8');
   }
+
+  // ── MEALS TABLE ───────────────────────────────────────────────
   const dashMeals = document.getElementById('dash-meals-list');
   if (!dayMeals.length) {
     const addBtn = isToday ? `<button class="btn btn-ghost btn-sm" onclick="openMealAdd()">Log a meal</button>` : '';
@@ -3120,20 +3258,58 @@ function renderDashboard() {
     dashMeals.innerHTML = `<table class="data-table"><thead><tr><th>Meal</th><th>Type</th><th>Time</th><th>Cal</th><th>Protein</th><th>Carbs</th><th>Fat</th></tr></thead><tbody>
       ${dayMeals.map(m => {
         const timeStr = m.datetime ? new Date(m.datetime).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false}) : '—';
-        return `<tr><td><strong>${esc(m.name)}</strong></td><td><span class="badge badge-blue">${m.type}</span></td><td style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--text2);">${timeStr}</td><td>${m.cal} kcal</td><td>${m.protein}g</td><td>${m.carbs}g</td><td>${m.fat}g</td></tr>`;
+        return `<tr>
+          <td><strong>${esc(m.name)}</strong></td>
+          <td><span class="badge badge-blue">${m.type}</span></td>
+          <td style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--text2);">${timeStr}</td>
+          <td style="font-family:'DM Mono',monospace;">${fmtNum(m.cal)} <span style="font-size:0.68rem;color:var(--text3);">kcal</span></td>
+          <td style="font-family:'DM Mono',monospace;">${fmtNum(m.protein,1)}<span style="font-size:0.68rem;color:var(--text3);">g</span></td>
+          <td style="font-family:'DM Mono',monospace;">${fmtNum(m.carbs,1)}<span style="font-size:0.68rem;color:var(--text3);">g</span></td>
+          <td style="font-family:'DM Mono',monospace;">${fmtNum(m.fat,1)}<span style="font-size:0.68rem;color:var(--text3);">g</span></td>
+        </tr>`;
       }).join('')}
       <tr style="font-weight:700;border-top:2px solid var(--border2);">
-        <td colspan="3" style="color:var(--accent);">Total</td><td>${totCal} kcal</td><td>${Math.round(totProtein*10)/10}g</td><td>${Math.round(totCarbs*10)/10}g</td><td>${Math.round(totFat*10)/10}g</td>
+        <td colspan="3" style="color:var(--accent);">Total</td>
+        <td style="font-family:'DM Mono',monospace;">${fmtNum(totCal)} <span style="font-size:0.68rem;font-weight:400;color:var(--text3);">kcal</span></td>
+        <td style="font-family:'DM Mono',monospace;">${fmtNum(totProtein,1)}<span style="font-size:0.68rem;font-weight:400;color:var(--text3);">g</span></td>
+        <td style="font-family:'DM Mono',monospace;">${fmtNum(totCarbs,1)}<span style="font-size:0.68rem;font-weight:400;color:var(--text3);">g</span></td>
+        <td style="font-family:'DM Mono',monospace;">${fmtNum(totFat,1)}<span style="font-size:0.68rem;font-weight:400;color:var(--text3);">g</span></td>
       </tr>
     </tbody></table>`;
   }
+
   const waterLabel = document.getElementById('water-date-label');
   if (waterLabel) waterLabel.textContent = isToday ? `${dashDate} (${offsetToLabel(tzOffset)})` : `Showing: ${dashDate} — water is tracked for today only`;
 }
 function macroBar(label, val, max, unit, color) {
-  const pct = Math.min(100, Math.round((val/max)*100));
+  const pct = Math.min(100, Math.round((val/(max||1))*100));
   const over = val > max;
-  return `<div class="macro-row"><div class="macro-label">${label}</div><div class="macro-bar"><div class="macro-fill" style="width:${pct}%;background:${over ? '#e06070' : color};"></div></div><div class="macro-val">${Math.round(val)}${unit}</div></div>`;
+  return `<div class="macro-row"><div class="macro-label">${label}</div><div class="macro-bar"><div class="macro-fill" style="width:${pct}%;background:${over ? '#e06070' : color};"></div></div><div class="macro-val">${Math.round(val)} ${unit}</div></div>`;
+}
+function macroBarV2(label, val, target, unit, color) {
+  if (!target) return '';
+  const roundedVal = Math.round(val * 10) / 10;
+  const pct  = Math.min(120, Math.round((val / target) * 100));
+  const diff = target - val;
+  const over = val > target;
+  // Color logic: green ≥100%, yellow 80–99%, red <80%
+  let barColor = color;
+  if (over) barColor = '#e06070';
+  else if (pct >= 80) barColor = '#7ecba0';
+  else if (pct >= 50) barColor = color;
+  else barColor = '#e06070';
+  let subText = '', subColor = 'var(--text3)';
+  if (over) { subText = `Exceeded by ${fmtNum(Math.abs(diff),1)} ${unit}`; subColor = 'var(--red)'; }
+  else if (pct >= 100) { subText = 'Target reached ✅'; subColor = 'var(--green)'; }
+  else { subText = `Remaining: ${fmtNum(Math.abs(diff),1)} ${unit}`; subColor = pct >= 80 ? 'var(--orange)' : 'var(--text3)'; }
+  return `<div class="macro-row-v2">
+    <div class="macro-header-v2">
+      <span class="macro-label-v2">${label}</span>
+      <span class="macro-nums-v2">${fmtNum(roundedVal,1)} / ${fmtNum(target)} ${unit}</span>
+    </div>
+    <div class="macro-bar-v2"><div class="macro-fill-v2" style="width:${pct}%;background:${barColor};"></div></div>
+    <div class="macro-sub-v2" style="color:${subColor};">${subText}</div>
+  </div>`;
 }
 
 // ============================================================
@@ -3164,10 +3340,40 @@ async function resetWater() {
 }
 async function updateWaterGoal(val) { waterData.goal = Number(val)||2000; await saveWater(); await saveUserProfile(); }
 function updateWaterUI() {
-  const pct = Math.min(1, waterData.ml / waterData.goal);
+  const pct  = Math.min(1, waterData.ml / (waterData.goal || 2000));
   document.getElementById('water-circle').style.strokeDashoffset = 345.4 * (1 - pct);
-  document.getElementById('water-ml').textContent         = waterData.ml;
-  document.getElementById('water-goal-label').textContent = `/ ${waterData.goal} ml`;
+  document.getElementById('water-ml').textContent         = fmtNum(waterData.ml);
+  document.getElementById('water-goal-label').textContent = `/ ${fmtNum(waterData.goal)} ml`;
+  // Water status text
+  const statusEl = document.getElementById('water-status-txt');
+  if (statusEl) {
+    const diff = (waterData.goal || 2000) - waterData.ml;
+    if (diff <= 0) {
+      const over = -diff;
+      statusEl.textContent  = over > 0 ? `+${fmtNum(over)} ml above goal 🎉` : 'Goal reached ✅';
+      statusEl.style.color  = 'var(--green)';
+    } else {
+      statusEl.textContent = `Remaining: ${fmtNum(diff)} ml`;
+      statusEl.style.color = 'var(--blue)';
+    }
+  }
+  // Sync today summary water row
+  const tsWv = document.getElementById('ts-water-val');
+  const tsWs = document.getElementById('ts-water-sub');
+  if (tsWv) {
+    const wGoal = waterData.goal || 2000;
+    const wMl   = waterData.ml  || 0;
+    tsWv.textContent = `${fmtNum(wMl)} / ${fmtNum(wGoal)} ml`;
+    const wDiff = wGoal - wMl;
+    if (wDiff <= 0) {
+      const over = -wDiff;
+      tsWs.textContent = over > 0 ? `+${fmtNum(over)} ml above goal` : 'Goal reached ✅';
+      tsWs.className = 'ts-sub ts-ok';
+    } else {
+      tsWs.textContent = `Remaining: ${fmtNum(wDiff)} ml`;
+      tsWs.className = 'ts-sub ts-warn';
+    }
+  }
 }
 function startWaterTimer() {
   if (!waterNextReminder) waterNextReminder = Date.now() + 2 * 60 * 60 * 1000;
