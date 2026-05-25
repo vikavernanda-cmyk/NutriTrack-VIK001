@@ -198,6 +198,8 @@
   .empty-state { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; padding: 2.5rem 1rem; color: var(--text3); }
   .empty-icon { font-size: 2rem; }
   .empty-state p { font-size: 0.8rem; text-align: center; }
+  /* OCR rows */
+  .ocr-item-row input, .ocr-item-row select { width:100%; box-sizing:border-box; padding:0.28rem 0.35rem; font-size:0.76rem; }
 
 /* ── TOAST ── */
   #toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--text); color: #fff; padding: 0.6rem 1.2rem; border-radius: 20px; font-size: 0.8rem; z-index: 999; transition: transform 0.3s ease, opacity 0.3s ease; opacity: 0; white-space: nowrap; }
@@ -390,8 +392,6 @@
   }
 </style>
 
-</style>
-
 </head>
 <body>
 
@@ -451,7 +451,7 @@
 
   <!-- Loading indicator inside setup screen -->
 
-  <div id="setup-loading" style="display:none;margin-top:2rem;display:none;flex-direction:column;align-items:center;gap:0.75rem;">
+  <div id="setup-loading" style="display:none;flex-direction:column;align-items:center;gap:0.75rem;margin-top:2rem;">
     <div style="width:28px;height:28px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;"></div>
     <div style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--text3);" id="setup-loading-msg">Connecting…</div>
   </div>
@@ -683,7 +683,7 @@
   <div id="page-inventory" class="page">
     <div class="page-header"><div><div class="section-title">Inventory</div><div class="section-desc">Items auto-added from Grocery Shopping. Click Edit Data to update all fields.</div></div>
     <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
-      <button class="btn btn-ghost btn-sm" style="color:var(--red);border-color:rgba(224,96,112,0.3);" onclick="openExpiredLog()">🗑 Lihat Basi/Expired</button>
+      <button class="btn btn-ghost btn-sm" style="color:var(--red);border-color:rgba(224,96,112,0.3);" onclick="openExpiredLog()">🗑 View Expired/Wasted</button>
       <button class="btn btn-primary" onclick="openManualInventoryAdd()">+ Add Item</button>
     </div>
     </div>
@@ -730,15 +730,15 @@
       <div style="display:flex;gap:0.5rem;margin-bottom:1rem;flex-wrap:wrap;align-items:center;">
         <select id="cook-filter" style="flex:1;min-width:150px;max-width:200px;" onchange="renderCooking()">
           <option value="all">All dishes</option>
-          <option value="available">Ada sisa serving</option>
-          <option value="habis">🚫 HABIS saja</option>
+          <option value="available">Has Servings Left</option>
+          <option value="habis">🚫 Empty Only</option>
         </select>
         <select id="cook-sort" style="flex:1;min-width:150px;max-width:200px;" onchange="renderCooking()">
-          <option value="date">Sort: Terbaru</option>
+          <option value="date">Sort: Newest</option>
           <option value="dish-az">Sort: Dish A–Z</option>
           <option value="dish-za">Sort: Dish Z–A</option>
-          <option value="avail-desc">Sort: Sisa terbanyak ↓</option>
-          <option value="avail-asc">Sort: Sisa tersedikit ↑</option>
+          <option value="avail-desc">Sort: Most Servings ↓</option>
+          <option value="avail-asc">Sort: Fewest Servings ↑</option>
           <option value="cal-desc">Sort: Kalori ↓</option>
         </select>
       </div>
@@ -756,13 +756,13 @@
     <div class="card">
       <div style="display:flex;gap:0.5rem;margin-bottom:1rem;flex-wrap:wrap;align-items:center;">
         <select id="meal-date-filter" style="flex:1;min-width:140px;max-width:200px;" onchange="renderMeals()">
-          <option value="today">Hari ini</option>
-          <option value="yesterday">Kemarin</option>
-          <option value="week">7 hari terakhir</option>
-          <option value="all">Semua data</option>
+          <option value="today">Today</option>
+          <option value="yesterday">Yesterday</option>
+          <option value="week">Last 7 days</option>
+          <option value="all">All entries</option>
         </select>
         <select id="meal-type-filter" style="flex:1;min-width:140px;max-width:180px;" onchange="renderMeals()">
-          <option value="all">Semua tipe</option>
+          <option value="all">All types</option>
           <option value="Breakfast">Breakfast</option>
           <option value="Lunch">Lunch</option>
           <option value="Dinner">Dinner</option>
@@ -796,26 +796,79 @@
   </div>
 
   <div id="page-spending" class="page">
-    <div class="page-header">
-      <div><div class="section-title">Grocery Shopping 🛒</div><div class="section-desc">Log grocery purchases — items auto-added to Inventory.</div></div>
-      <button class="btn btn-primary" onclick="openSpendingAdd()">+ Add Item</button>
+    <!-- HEADER -->
+    <div class="page-header" style="flex-direction:column;gap:0.75rem;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;width:100%;flex-wrap:wrap;gap:0.5rem;">
+        <div>
+          <div class="section-title">Food & Grocery Tracker 🛒</div>
+          <div class="section-desc">Track all food purchases — grocery goes to Inventory, takeout goes to Meal Log.</div>
+        </div>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+          <button class="btn btn-ghost btn-sm" onclick="openOCRModal()">📷 Scan Receipt</button>
+          <button class="btn btn-primary" onclick="openSpendingAdd()">+ Add Item</button>
+        </div>
+      </div>
+      <!-- DATE RANGE CONTROL -->
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+        <div style="font-size:0.72rem;color:var(--text3);font-family:'DM Mono',monospace;white-space:nowrap;">Date Range:</div>
+        <input type="date" id="spend-range-start" style="font-size:0.78rem;padding:0.3rem 0.5rem;" onchange="renderSpending()"/>
+        <span style="color:var(--text3);font-size:0.8rem;">–</span>
+        <input type="date" id="spend-range-end"   style="font-size:0.78rem;padding:0.3rem 0.5rem;" onchange="renderSpending()"/>
+        <button class="btn btn-ghost btn-sm" onclick="setSpendRange(7)">7d</button>
+        <button class="btn btn-ghost btn-sm" onclick="setSpendRange(30)">30d</button>
+        <button class="btn btn-ghost btn-sm" onclick="setSpendRange(0)">This Month</button>
+        <button class="btn btn-ghost btn-sm" onclick="setSpendRange(-1)">All Time</button>
+      </div>
     </div>
-    <div class="grid-3" style="margin-bottom:1rem;">
-      <div class="stat-block"><div class="stat-label">This Month</div><div class="stat-value text-accent spending-amount" id="spend-month">—</div><div class="stat-change">total spending</div></div>
-      <div class="stat-block"><div class="stat-label">This Week</div><div class="stat-value spending-amount" id="spend-week">—</div><div class="stat-change">total spending</div></div>
-      <div class="stat-block"><div class="stat-label">All Time</div><div class="stat-value spending-amount" id="spend-all">—</div><div class="stat-change">total spending</div></div>
+
+    <!-- KPI SUMMARY BAR -->
+    <div class="today-summary" style="margin-bottom:1rem;">
+      <div class="ts-grid" style="grid-template-columns:repeat(4,1fr);">
+        <div class="ts-item"><div class="ts-label">💰 Total Spending</div><div class="ts-value text-accent" id="spend-range-total">—</div><div class="ts-sub" id="spend-range-label">in range</div></div>
+        <div class="ts-item"><div class="ts-label">🛒 Grocery</div><div class="ts-value" id="spend-grocery-total" style="color:var(--green);">—</div><div class="ts-sub" id="spend-grocery-pct">—%</div></div>
+        <div class="ts-item"><div class="ts-label">🥡 Takeout</div><div class="ts-value" id="spend-takeout-total" style="color:var(--orange);">—</div><div class="ts-sub" id="spend-takeout-pct">—%</div></div>
+        <div class="ts-item"><div class="ts-label">📦 Items</div><div class="ts-value" id="spend-item-count">—</div><div class="ts-sub" id="spend-avg-per-day">avg/day</div></div>
+      </div>
     </div>
+
+    <!-- ANALYTICS ROW: Category Breakdown + Grocery vs Takeout -->
+    <div class="grid-2" style="margin-bottom:1rem;">
+      <!-- Category chart -->
+      <div class="card">
+        <div class="card-header">
+          <div><div class="card-title">📊 Spending by Category</div><div class="card-sub" id="spend-chart-sub">Click a bar to filter</div></div>
+          <button class="btn btn-ghost btn-sm" onclick="clearSpendCatFilter()">Clear</button>
+        </div>
+        <div id="spend-cat-chart" style="overflow-x:auto;"></div>
+      </div>
+      <!-- Grocery vs Takeout donut -->
+      <div class="card">
+        <div class="card-header"><div class="card-title">🥗 Grocery vs Takeout</div></div>
+        <div id="spend-type-chart" style="display:flex;flex-direction:column;gap:0.5rem;padding:0.5rem 0;"></div>
+      </div>
+    </div>
+
+    <!-- FILTER BAR + TABLE -->
     <div class="card">
       <div style="display:flex;gap:0.5rem;margin-bottom:1rem;flex-wrap:wrap;align-items:center;">
-        <select id="spend-cat-filter" style="flex:1;min-width:150px;max-width:220px;" onchange="renderSpending()">
-          <option value="all">Semua Kategori</option>
+        <select id="spend-cat-filter" style="flex:1;min-width:130px;max-width:180px;" onchange="renderSpending()">
+          <option value="all">All Categories</option>
           <option>Sayuran</option><option>Buah</option><option>Protein/Daging</option>
           <option>Seafood</option><option>Dairy/Telur</option><option>Bumbu Dapur</option>
           <option>Karbohidrat/Biji</option><option>Minyak/Lemak</option><option>Snacks</option>
           <option>Minuman</option><option>Lainnya</option>
         </select>
+        <select id="spend-type-filter" style="flex:1;min-width:120px;max-width:160px;" onchange="renderSpending()">
+          <option value="all">All Types</option>
+          <option value="grocery">🛒 Grocery</option>
+          <option value="takeout">🥡 Takeout</option>
+        </select>
+        <div style="display:flex;gap:0.3rem;align-items:center;flex:1;min-width:150px;">
+          <input type="text" id="spend-search" placeholder="Search item..." style="padding:0.35rem 0.5rem;font-size:0.78rem;flex:1;" oninput="renderSpending()"/>
+        </div>
+        <div style="font-size:0.72rem;color:var(--text3);font-family:'DM Mono',monospace;white-space:nowrap;" id="spend-filtered-count"></div>
       </div>
-      <div id="spending-table-wrap"><div class="empty-state"><div class="empty-icon">🛒</div><p>No grocery items recorded yet.</p></div></div>
+      <div id="spending-table-wrap"><div class="empty-state"><div class="empty-icon">🛒</div><p>No items recorded yet.</p></div></div>
     </div>
   </div>
   <div id="page-settings" class="page">
@@ -929,11 +982,11 @@
       <div style="font-size:1.4rem;font-weight:700;color:var(--accent);" id="inv-reduce-current">—</div>
     </div>
     <div class="form-group" style="margin-bottom:0.75rem;">
-      <label>Alasan Reduce</label>
+      <label>Reason for Reduction</label>
       <select id="inv-reduce-reason" onchange="updateReduceReasonUI()">
-        <option value="used">Digunakan (masak/konsumsi)</option>
-        <option value="expired">Expired / Basi 🗑</option>
-        <option value="other">Lainnya</option>
+        <option value="used">Used (cooking / consumed)</option>
+        <option value="expired">Expired / Spoiled 🗑</option>
+        <option value="other">Other</option>
       </select>
     </div>
     <div class="form-row">
@@ -953,8 +1006,8 @@
       <div id="inv-reduce-family-rows" style="margin-bottom:0.75rem;"></div>
     </div>
     <div id="inv-reduce-expired-note" style="display:none;background:rgba(224,96,112,0.07);border:1px solid rgba(224,96,112,0.2);border-radius:8px;padding:0.6rem 0.85rem;margin-bottom:0.75rem;">
-      <div style="font-size:0.78rem;color:var(--red);font-weight:600;">🗑 Reduce karena Expired/Basi</div>
-      <div style="font-size:0.72rem;color:var(--text2);margin-top:0.2rem;">Item akan dicatat sebagai waste. Lihat riwayat di tombol "Lihat Basi/Expired" di halaman Inventory.</div>
+      <div style="font-size:0.78rem;color:var(--red);font-weight:600;">🗑 Reducing due to Expiry / Spoilage</div>
+      <div style="font-size:0.72rem;color:var(--text2);margin-top:0.2rem;">This item will be recorded as waste. View history via "View Expired/Wasted" on the Inventory page.</div>
     </div>
     <div class="form-actions">
       <button class="btn btn-ghost" onclick="closeModal('modal-inventory-reduce')">Cancel</button>
@@ -966,10 +1019,10 @@
 <div class="modal-overlay" id="modal-expired-log">
   <div class="modal" style="max-width:520px;">
     <div class="modal-header">
-      <div><div class="modal-title">🗑 Riwayat Item Basi / Expired</div><div style="font-size:0.72rem;color:var(--text3);margin-top:0.2rem;">Item yang di-reduce karena expired atau basi</div></div>
+      <div><div class="modal-title">🗑 Expired / Wasted Items Log</div><div style="font-size:0.72rem;color:var(--text3);margin-top:0.2rem;">Items reduced due to expiry or spoilage</div></div>
       <button class="modal-close" onclick="closeModal('modal-expired-log')">✕</button>
     </div>
-    <div id="expired-log-list"><div class="empty-state"><div class="empty-icon">🗑</div><p>Belum ada riwayat item basi/expired.</p></div></div>
+    <div id="expired-log-list"><div class="empty-state"><div class="empty-icon">🗑</div><p>No expired or wasted items logged yet.</p></div></div>
   </div>
 </div>
 
@@ -992,7 +1045,7 @@
           <option>Sayuran</option><option>Buah</option><option>Protein/Daging</option>
           <option>Seafood</option><option>Dairy/Telur</option><option>Bumbu Dapur</option>
           <option>Karbohidrat/Biji</option><option>Minyak/Lemak</option><option>Snacks</option>
-          <option>Minuman</option><option>Protein</option><option>Vegetable</option><option>Fruit</option><option>Grain/Carb</option><option>Dairy</option><option>Fat/Oil</option><option>Spice/Herb</option><option>Other</option><option>Lainnya</option>
+          <option>Minuman</option><option>Lainnya</option>
         </select>
       </div>
       <div class="form-group"><label>Purchase Date</label><input type="date" id="inv-edit-date"/></div>
@@ -1140,7 +1193,14 @@
 <div class="modal-overlay" id="modal-meal">
   <div class="modal">
     <div class="modal-header"><div class="modal-title">Log Meal 🍽</div><button class="modal-close" onclick="closeModal('modal-meal')">✕</button></div>
-    <div class="form-group"><label>Meal Name / Dish</label><input type="text" id="meal-name" placeholder="e.g. Ayam Goreng Kunyit" list="cooked-dishes-list"/><datalist id="cooked-dishes-list"></datalist></div>
+    <div class="form-group">
+      <label>Meal Name / Dish</label>
+      <div style="display:flex;gap:0.4rem;">
+        <input type="text" id="meal-name" placeholder="e.g. Ayam Goreng Kunyit" list="cooked-dishes-list" style="flex:1;" onblur="autoFillMealFromCooking()" oninput="autoFillMealFromCooking()" onchange="autoFillMealFromCooking()"/>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="autoFillMealFromCooking()" style="white-space:nowrap;flex-shrink:0;">🔍 Find</button>
+      </div>
+      <datalist id="cooked-dishes-list"></datalist>
+    </div>
     <div class="form-row">
       <div class="form-group"><label>Date &amp; Time</label><input type="datetime-local" id="meal-datetime"/></div>
       <div class="form-group"><label>Meal Type</label>
@@ -1159,30 +1219,59 @@
     </div>
     <div class="form-group"><label>Fiber (g)</label><input type="number" id="meal-fiber" placeholder="auto or manual"/></div>
     <div class="form-group"><label>Notes (optional)</label><textarea id="meal-notes" rows="2"></textarea></div>
+
+    <!-- DEDUCT FROM INVENTORY CHECKBOX -->
+    <div id="meal-deduct-section" style="display:none;background:rgba(122,180,232,0.07);border:1px solid rgba(122,180,232,0.25);border-radius:10px;padding:0.65rem 0.85rem;margin-bottom:0.75rem;">
+      <label style="display:flex;align-items:flex-start;gap:0.6rem;cursor:pointer;">
+        <input type="checkbox" id="meal-deduct-inv" style="width:16px;height:16px;margin-top:2px;flex-shrink:0;" checked/>
+        <div>
+          <div style="font-size:0.82rem;font-weight:600;color:var(--text);">📦 Deduct from Inventory</div>
+          <div style="font-size:0.72rem;color:var(--text2);margin-top:0.15rem;font-family:'DM Mono',monospace;" id="meal-deduct-detail">—</div>
+        </div>
+      </label>
+    </div>
+
     <div class="form-actions">
       <button class="btn btn-ghost" onclick="closeModal('modal-meal')">Cancel</button>
-      <button class="btn btn-primary" onclick="saveMeal()">Log Meal</button>
+      <button class="btn btn-primary" id="btn-log-meal" onclick="saveMeal()">Log Meal</button>
     </div>
   </div>
 </div>
 
 <div class="modal-overlay" id="modal-spending">
-  <div class="modal">
-    <div class="modal-header"><div class="modal-title">Add Grocery Item 🛒</div><button class="modal-close" onclick="closeModal('modal-spending')">✕</button></div>
-    <div class="form-group"><label>Item Name</label><input type="text" id="spend-desc" placeholder="e.g. Ayam fillet, Bawang putih"/></div>
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header"><div class="modal-title" id="modal-spending-title">Add Food Item 🛒</div><button class="modal-close" onclick="closeModal('modal-spending')">✕</button></div>
+
+    <!-- ITEM TYPE SELECTOR -->
+    <div style="display:flex;gap:0;border:1px solid var(--border2);border-radius:var(--r);overflow:hidden;margin-bottom:1rem;">
+      <button id="stype-grocery-btn" class="period-tab active" style="flex:1;" onclick="setSpendType('grocery')">🛒 Grocery Shopping</button>
+      <button id="stype-takeout-btn" class="period-tab" style="flex:1;border-left:1px solid var(--border2);" onclick="setSpendType('takeout')">🥡 Takeout / Buy Outside</button>
+    </div>
+
+    <!-- BASIC INFO -->
+    <div class="form-group">
+      <label>Item Name <span style="color:var(--red);">*</span></label>
+      <div style="position:relative;">
+        <input type="text" id="spend-desc" placeholder="e.g. Coco Crunch, Ayam Fillet, Nasi Padang" autocomplete="off" oninput="spendNameSuggest(this.value)"/>
+        <div id="spend-name-suggestions" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border2);border-radius:0 0 var(--r) var(--r);z-index:99;max-height:150px;overflow-y:auto;box-shadow:0 4px 12px #0002;"></div>
+      </div>
+    </div>
+
     <div class="form-row">
-      <div class="form-group"><label>Quantity</label><input type="number" id="spend-qty" placeholder="e.g. 500" min="0" step="any"/></div>
-      <div class="form-group"><label>Satuan</label>
+      <div class="form-group"><label>Quantity Bought</label><input type="number" id="spend-qty" placeholder="e.g. 1, 500" min="0" step="any"/></div>
+      <div class="form-group"><label>Unit</label>
         <select id="spend-unit">
-          <option>kg</option><option>gram</option><option>ml</option><option>L</option>
-          <option>pcs</option><option>pack</option><option>ikat</option><option>buah</option><option>sachet</option>
+          <option>pack</option><option>kg</option><option>gram</option><option>ml</option><option>L</option>
+          <option>pcs</option><option>ikat</option><option>buah</option><option>sachet</option><option>box</option><option>botol</option>
         </select>
       </div>
     </div>
+
     <div class="form-row">
-      <div class="form-group"><label>Amount (IDR)</label><input type="number" id="spend-amount" placeholder="e.g. 25000"/></div>
+      <div class="form-group"><label>Price (IDR) <span style="color:var(--red);">*</span></label><input type="number" id="spend-amount" placeholder="e.g. 25000"/></div>
       <div class="form-group"><label>Date</label><input type="date" id="spend-date"/></div>
     </div>
+
     <div class="form-group"><label>Category</label>
       <select id="spend-cat">
         <option>Sayuran</option><option>Buah</option><option>Protein/Daging</option>
@@ -1191,27 +1280,104 @@
         <option>Minuman</option><option>Lainnya</option>
       </select>
     </div>
+
+    <!-- TAKEOUT OPTIONS -->
+    <div id="spend-takeout-section" style="display:none;background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);padding:0.75rem;margin-bottom:0.75rem;">
+      <div style="font-size:0.78rem;font-weight:700;color:var(--orange);margin-bottom:0.5rem;">🥡 Takeout Options</div>
+      <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-size:0.82rem;margin-bottom:0.5rem;">
+        <input type="checkbox" id="spend-add-meal" checked style="width:16px;height:16px;" onchange="updateTakeoutMealRow()"/> Add directly to Meal Log
+      </label>
+      <div id="spend-meal-type-row" style="display:flex;gap:0.5rem;align-items:center;margin-top:0.35rem;">
+        <div style="font-size:0.75rem;color:var(--text2);white-space:nowrap;">Meal type:</div>
+        <select id="spend-meal-type" style="flex:1;">
+          <option value="Breakfast">Breakfast</option>
+          <option value="Lunch" selected>Lunch</option>
+          <option value="Dinner">Dinner</option>
+          <option value="Snack">Snack</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- NUTRITION / SERVING INFO (expandable) -->
+    <div style="margin-bottom:0.75rem;">
+      <button class="btn btn-ghost btn-sm" onclick="toggleSpendNutrition()" id="spend-nutrition-toggle" style="width:100%;text-align:left;justify-content:space-between;display:flex;">
+        <span>📊 Add Nutrition / Serving Info</span><span id="spend-nutrition-arrow">▼</span>
+      </button>
+      <div id="spend-nutrition-panel" style="display:none;background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);padding:0.75rem;margin-top:0.35rem;">
+        <div style="font-size:0.72rem;color:var(--text3);font-family:'DM Mono',monospace;margin-bottom:0.5rem;">Per serving / per unit — stored to Ingredients Library</div>
+        <div class="form-row">
+          <div class="form-group" style="margin-bottom:0.4rem;"><label style="font-size:0.72rem;">Serving Size (g or ml)</label><input type="number" id="spend-serving-size" placeholder="e.g. 30" min="0" step="any"/></div>
+          <div class="form-group" style="margin-bottom:0.4rem;"><label style="font-size:0.72rem;">Servings per Pack</label><input type="number" id="spend-servings-per-pack" placeholder="e.g. 16" min="0" step="any" oninput="spendCalcTotal()"/></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="margin-bottom:0.4rem;"><label style="font-size:0.72rem;">Calories (per serving)</label><input type="number" id="spend-cal-per-serving" placeholder="120" min="0" step="any" oninput="spendCalcTotal()"/></div>
+          <div class="form-group" style="margin-bottom:0.4rem;"><label style="font-size:0.72rem;">Protein g</label><input type="number" id="spend-prot-per-serving" placeholder="2" min="0" step="any"/></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="margin-bottom:0.4rem;"><label style="font-size:0.72rem;">Carbs g</label><input type="number" id="spend-carbs-per-serving" placeholder="24" min="0" step="any"/></div>
+          <div class="form-group" style="margin-bottom:0.4rem;"><label style="font-size:0.72rem;">Fat g</label><input type="number" id="spend-fat-per-serving" placeholder="2" min="0" step="any"/></div>
+        </div>
+        <div id="spend-nutrition-calc" style="font-size:0.72rem;color:var(--text2);font-family:'DM Mono',monospace;margin-top:0.3rem;"></div>
+        <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;font-size:0.78rem;margin-top:0.5rem;">
+          <input type="checkbox" id="spend-save-to-lib" checked style="width:14px;height:14px;"/> Save to Ingredients Library
+        </label>
+      </div>
+    </div>
+
     <div class="form-actions">
       <button class="btn btn-ghost" onclick="closeModal('modal-spending')">Cancel</button>
-      <button class="btn btn-primary" onclick="saveSpending()">Simpan Item</button>
+      <button class="btn btn-primary" onclick="saveSpending()">Save Item</button>
+    </div>
+  </div>
+</div>
+
+<!-- OCR RECEIPT MODAL -->
+<div class="modal-overlay" id="modal-ocr">
+  <div class="modal" style="max-width:540px;">
+    <div class="modal-header"><div class="modal-title">📷 Scan Receipt / Screenshot</div><button class="modal-close" onclick="closeModal('modal-ocr')">✕</button></div>
+
+    <div id="ocr-upload-section">
+      <div style="border:2px dashed var(--border2);border-radius:var(--r);padding:2rem;text-align:center;margin-bottom:1rem;cursor:pointer;" onclick="document.getElementById('ocr-file-input').click()">
+        <div style="font-size:2rem;margin-bottom:0.5rem;">📄</div>
+        <div style="font-size:0.85rem;font-weight:600;color:var(--text);">Click to upload receipt image</div>
+        <div style="font-size:0.75rem;color:var(--text3);margin-top:0.25rem;">JPG, PNG, WEBP supported</div>
+      </div>
+      <input type="file" id="ocr-file-input" accept="image/*" style="display:none;" onchange="handleOCRUpload(this)"/>
+      <div style="text-align:center;font-size:0.75rem;color:var(--text3);">or paste items manually below ↓</div>
+    </div>
+    <div id="ocr-processing" style="display:none;text-align:center;padding:1.5rem;">
+      <div style="font-size:1.5rem;margin-bottom:0.5rem;">🔍</div>
+      <div style="font-size:0.85rem;color:var(--text2);margin-bottom:0.75rem;" id="ocr-status-text">Memuat Tesseract OCR...</div>
+      <div style="background:var(--border);border-radius:4px;height:6px;overflow:hidden;max-width:200px;margin:0 auto;">
+        <div id="ocr-progress-bar" style="height:100%;background:var(--accent);border-radius:4px;width:0%;transition:width 0.3s;"></div>
+      </div>
+    </div>
+    <div id="ocr-results-section" style="display:none;">
+      <div style="font-size:0.78rem;font-weight:700;color:var(--text3);font-family:'DM Mono',monospace;text-transform:uppercase;margin-bottom:0.5rem;">Detected Items — Edit before saving</div>
+      <div id="ocr-items-list"></div>
+      <button class="btn btn-ghost btn-sm" onclick="addOCRItemRow()" style="margin-top:0.5rem;width:100%;">+ Add Row Manually</button>
+    </div>
+    <div class="form-actions" id="ocr-actions" style="display:none;">
+      <button class="btn btn-ghost" onclick="closeModal('modal-ocr')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveAllOCRItems()">Save All Items</button>
     </div>
   </div>
 </div>
 
 <div class="modal-overlay" id="modal-bottles">
   <div class="modal">
-    <div class="modal-header"><div class="modal-title">🍶 Kelola Botol Minum</div><button class="modal-close" onclick="closeModal('modal-bottles')">✕</button></div>
-    <p style="font-size:0.8rem;color:var(--text2);margin-bottom:1.25rem;">Tambahkan botol minummu. Nanti bisa klik langsung di water tracker.</p>
+    <div class="modal-header"><div class="modal-title">🍶 Manage Water Bottles</div><button class="modal-close" onclick="closeModal('modal-bottles')">✕</button></div>
+    <p style="font-size:0.8rem;color:var(--text2);margin-bottom:1.25rem;">Add your water bottles. You can tap them directly in the water tracker to log intake.</p>
     <div id="bottle-list"></div>
     <div class="divider"></div>
-    <div style="font-size:0.8rem;font-weight:600;margin-bottom:0.75rem;color:var(--text);">Tambah Botol Baru</div>
+    <div style="font-size:0.8rem;font-weight:600;margin-bottom:0.75rem;color:var(--text);">Add New Bottle</div>
     <div class="form-row">
-      <div class="form-group"><label>Nama Botol</label><input type="text" id="new-bottle-name" placeholder="e.g. Botol Minum A"/></div>
+      <div class="form-group"><label>Bottle Name</label><input type="text" id="new-bottle-name" placeholder="e.g. Gym Bottle, Office Tumbler"/></div>
       <div class="form-group"><label>Volume (ml)</label><input type="number" id="new-bottle-ml" placeholder="e.g. 500"/></div>
     </div>
     <div class="form-actions">
-      <button class="btn btn-ghost" onclick="closeModal('modal-bottles')">Tutup</button>
-      <button class="btn btn-primary" onclick="addBottle()">Tambah Botol</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-bottles')">Close</button>
+      <button class="btn btn-primary" onclick="addBottle()">Add Bottle</button>
     </div>
   </div>
 </div>
@@ -1846,6 +2012,8 @@ function esc(s) { return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'
 function renderAll() {
   renderInventory(); renderIngDB(); renderCooking();
   renderMeals(); renderSpending(); renderDashboard(); updateIngDBList();
+  // Init spend range on first load
+  if (!document.getElementById('spend-range-start').value) initSpendRange();
   if (document.getElementById('page-mealplan').classList.contains('active')) renderMealPlan();
 }
 
@@ -1867,7 +2035,7 @@ function openModal(id) {
 }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); currentEditId = null; }
 window.addEventListener('click', e => {
-  if (e.target.classList.contains('modal-overlay')) e.target.classList.remove('open');
+  if (e.target.classList.contains('modal-overlay')) { e.target.classList.remove('open'); currentEditId = null; }
 });
 
 let toastTimer;
@@ -2056,7 +2224,7 @@ function renderInventory() {
 
   const catFilterRow = `
     <select class="inv-inline-select" onchange="document.getElementById('inv-filter-cat').value=this.value;renderInventory();" title="Filter Kategori">
-      <option value="" ${!catFilter?'selected':''}>Semua Kategori</option>
+      <option value="" ${!catFilter?'selected':''}>All Categories</option>
       <option value="sayuran"        ${catFilter==='sayuran'?'selected':''}>Sayuran</option>
       <option value="buah"           ${catFilter==='buah'?'selected':''}>Buah</option>
       <option value="protein/daging" ${catFilter==='protein/daging'?'selected':''}>Protein/Daging</option>
@@ -2073,8 +2241,8 @@ function renderInventory() {
   const qtyFilterRow = `
     <select class="inv-inline-select" onchange="document.getElementById('inv-filter-qty').value=this.value;renderInventory();" title="Filter Qty">
       <option value="all"   ${qtyFilter==='all'  ?'selected':''}>Semua</option>
-      <option value="ada"   ${qtyFilter==='ada'  ?'selected':''}>Ada (qty &gt; 0)</option>
-      <option value="habis" ${qtyFilter==='habis'?'selected':''}>Habis (qty = 0)</option>
+      <option value="ada"   ${qtyFilter==='ada'  ?'selected':''}>In Stock (qty &gt; 0)</option>
+      <option value="habis" ${qtyFilter==='habis'?'selected':''}>Empty (qty = 0)</option>
     </select>`;
 
   const statusFilterRow = `
@@ -2101,10 +2269,10 @@ function renderInventory() {
             : i.expiryDate + ' <span style="font-size:0.68rem;color:var(--text3);">(' + daysLeft + 'd)</span>')
           : '<span style="color:var(--text3);">—</span>';
         const qtyDisplay = isHabis
-          ? `<span style="color:var(--red);font-weight:700;">0 ${esc(i.unit)}</span> <span class="badge-habis">HABIS</span>`
+          ? `<span style="color:var(--red);font-weight:700;">0 ${esc(i.unit)}</span> <span class="badge-habis">EMPTY</span>`
           : `${qty} ${esc(i.unit)}`;
         const statusCell = isHabis
-          ? `<span class="badge badge-red">🚫 Habis</span>`
+          ? `<span class="badge badge-red">🚫 Empty</span>`
           : `<span class="badge ${badgeMap[status]}">${statusMap[status]}</span>`;
         return `<tr style="${isHabis ? 'opacity:0.6;' : ''}">
           <td><strong>${esc(i.name)}</strong></td>
@@ -2133,8 +2301,8 @@ function renderInventory() {
         <tr>
           <th class="inv-th" onclick="invSetSort('name')">Item ${sortArrow('name')}</th>
           <th class="inv-th" onclick="invSetSort('qty')">Qty ${sortArrow('qty')}</th>
-          <th class="inv-th" onclick="invSetSort('category')">Kategori ${sortArrow('category')}</th>
-          <th class="inv-th" onclick="invSetSort('date')">Dibeli ${sortArrow('date')}</th>
+          <th class="inv-th" onclick="invSetSort('category')">Category ${sortArrow('category')}</th>
+          <th class="inv-th" onclick="invSetSort('date')">Purchase Date ${sortArrow('date')}</th>
           <th class="inv-th" onclick="invSetSort('expiry')">Exp. Date ${sortArrow('expiry')}</th>
           <th class="inv-th" onclick="invSetSort('status')">Status ${sortArrow('status')}</th>
           <th>Notes</th>
@@ -2596,7 +2764,7 @@ function renderIngDB() {
   // ── Inline category filter dropdown ──────────────────────────
   const catFilterRow = `
     <select class="inv-inline-select" onchange="document.getElementById('ingdb-cat-filter-val').value=this.value;ingDbCatFilter=this.value;renderIngDB();" title="Filter Category">
-      <option value="" ${!ingDbCatFilter?'selected':''}>Semua Kategori</option>
+      <option value="" ${!ingDbCatFilter?'selected':''}>All Categories</option>
       <option value="grain/carb"  ${ingDbCatFilter==='grain/carb' ?'selected':''}>Grain/Carb</option>
       <option value="protein"     ${ingDbCatFilter==='protein'    ?'selected':''}>Protein</option>
       <option value="fat/oil"     ${ingDbCatFilter==='fat/oil'    ?'selected':''}>Fat/Oil</option>
@@ -2677,7 +2845,7 @@ function openCookingAdd() {
   document.getElementById('modal-cooking').querySelector('.modal-title').textContent = 'Log Cooking Session 🍳';
   ['cook-dish','cook-notes','cook-ing-name','cook-ing-qty','cook-ing-cal100'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('cook-servings').value = '';
-  document.getElementById('cook-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('cook-date').value = todayLocal();
   cookingIngredients = [];
   renderCookIngTags();
   updateIngDBList();
@@ -2794,7 +2962,13 @@ async function saveCooking() {
       try { oldIngs = JSON.parse(oldCook.ingredients); } catch(e) {}
       for (const ing of oldIngs) {
         const inv = db.inventory.find(i => i.name.toLowerCase() === ing.name.toLowerCase());
-        if (inv) { await fbUpdate('inventory', inv.id, { qty: inv.qty + ing.qty }); }
+        if (inv) {
+          // Restore using same unit-conversion logic as deduction (bug fix: was using raw ing.qty)
+          const ingGrams = toGrams(ing.qty, ing.unit, ing.name);
+          const invGramsPerUnit = toGrams(1, inv.unit, inv.name);
+          const restoreInInvUnit = invGramsPerUnit > 0 ? ingGrams / invGramsPerUnit : ing.qty;
+          await fbUpdate('inventory', inv.id, { qty: Math.round((Number(inv.qty) + restoreInInvUnit) * 100) / 100 });
+        }
       }
     }
     const oldAvail = oldCook ? (oldCook.availableServings !== undefined ? oldCook.availableServings : oldCook.servings) : totalServings;
@@ -2870,7 +3044,7 @@ function renderCooking() {
   else if (sortVal === 'cal-desc') items.sort((a,b) => b.cal - a.cal);
   else items.sort((a,b) => (b.date||'').localeCompare(a.date||''));
 
-  if (!items.length) { wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">🍳</div><p>Tidak ada data.</p></div>'; return; }
+  if (!items.length) { wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">🍳</div><p>No results for this filter.</p></div>'; return; }
 
   // Sort indicators for column headers
   function cookSortArrow(asc, desc) {
@@ -2887,7 +3061,7 @@ function renderCooking() {
       <select onchange="document.getElementById('cook-filter').value=this.value;invCloseFilterPanel('cook-sisa-panel');renderCooking();">
         <option value="all" ${filterVal==='all'?'selected':''}>Semua</option>
         <option value="available" ${filterVal==='available'?'selected':''}>Ada sisa serving</option>
-        <option value="habis" ${filterVal==='habis'?'selected':''}>🚫 Habis</option>
+        <option value="habis" ${filterVal==='habis'?'selected':''}>🚫 Empty</option>
       </select>
     </div>`;
   }
@@ -2906,7 +3080,7 @@ function renderCooking() {
     const avail = i._avail;
     const isHabis = avail <= 0;
     const availCell = isHabis
-      ? `<span class="badge badge-red" style="font-size:0.7rem;padding:0.2rem 0.5rem;">🚫 HABIS</span>`
+      ? `<span class="badge badge-red" style="font-size:0.7rem;padding:0.2rem 0.5rem;">🚫 Empty</span>`
       : `<span style="font-family:'DM Mono',monospace;font-weight:700;color:${avail < i.servings ? 'var(--orange)' : 'var(--green)'}">${avail}</span>`;
     return `<tr style="${isHabis ? 'opacity:0.6;' : ''}">
       <td><strong>${esc(i.dish)}</strong></td>
@@ -2941,45 +3115,77 @@ function updateCookedDishesList() {
     const combined = [...new Set([...cookedDishes, ...ingNames])];
     dl.innerHTML = combined.map(d => `<option value="${esc(d)}"/>`).join('');
   }
-  const nameEl = document.getElementById('meal-name');
-  if (nameEl) { nameEl.oninput = function() { autoFillMealFromCooking(); }; nameEl.onchange = function() { autoFillMealFromCooking(); }; }
   const srvEl = document.getElementById('meal-servings');
   if (srvEl) srvEl.oninput = function() { autoFillMealFromCooking(); };
 }
 function autoFillMealFromCooking() {
-  const val  = (document.getElementById('meal-name').value||'').toLowerCase();
-  const dish = db.cooking.find(c => c.dish.toLowerCase() === val);
-  const ing  = db.ingredientsDB.find(i => i.name.toLowerCase() === val);
+  const val = (document.getElementById('meal-name').value||'').trim().toLowerCase();
+  if (!val) return;
+  // Pick best cooking entry: prefer most recent with valid cal > 0
+  const matches = db.cooking.filter(c => (c.dish||'').toLowerCase() === val);
+  const dish = matches.find(c => Number(c.cal) > 0) || matches[0] || null;
+  const ing  = db.ingredientsDB.find(i => (i.name||'').toLowerCase() === val);
+  console.log('[autoFill] val=', val, '| dish=', dish, '| ing=', ing, '| cooking count=', db.cooking.length);
   const hint = document.getElementById('meal-avail-hint');
   if (hint) hint.remove();
   if (dish) {
+    // Cooking Log match → hide inventory deduct (cooking session already deducted from inventory)
+    const _ds = document.getElementById('meal-deduct-section');
+    if (_ds) _ds.style.display = 'none';
     const srv = Number(document.getElementById('meal-servings').value)||1;
-    const f = srv / dish.servings;
-    document.getElementById('meal-cal').value     = Math.round(dish.cal * f);
-    document.getElementById('meal-protein').value = Math.round(dish.protein * f * 10) / 10;
-    document.getElementById('meal-fat').value     = Math.round(dish.fat * f * 10) / 10;
-    document.getElementById('meal-carbs').value   = Math.round(dish.carbs * f * 10) / 10;
-    document.getElementById('meal-fiber').value   = Math.round(dish.fiber * f * 10) / 10;
+    const f = srv / (Number(dish.servings) || 1);
+    document.getElementById('meal-cal').value     = Math.round((Number(dish.cal) || 0) * f);
+    document.getElementById('meal-protein').value = Math.round((Number(dish.protein) || 0) * f * 10) / 10;
+    document.getElementById('meal-fat').value     = Math.round((Number(dish.fat) || 0) * f * 10) / 10;
+    document.getElementById('meal-carbs').value   = Math.round((Number(dish.carbs) || 0) * f * 10) / 10;
+    document.getElementById('meal-fiber').value   = Math.round((Number(dish.fiber) || 0) * f * 10) / 10;
     const avail = (dish.availableServings !== undefined) ? dish.availableServings : dish.servings;
     const newHint = document.createElement('div');
     newHint.id = 'meal-avail-hint';
     newHint.style.cssText = 'font-size:0.72rem;margin-top:0.3rem;padding:0.3rem 0.6rem;border-radius:6px;';
     document.getElementById('meal-servings').parentNode.appendChild(newHint);
-    newHint.textContent = `Available from Cooking Log: ${avail} serving(s) remaining`;
+    newHint.textContent = `✓ From Cooking Log: ${avail} serving${avail !== 1 ? "s" : ""} left · ${Math.round(Number(dish.cal)||0)} kcal/srv`;
     newHint.style.background = avail < srv ? 'rgba(224,96,112,0.1)' : 'rgba(126,203,160,0.1)';
     newHint.style.color = avail < srv ? 'var(--red)' : '#3a9060';
   } else if (ing) {
     const srv = Number(document.getElementById('meal-servings').value)||1;
-    document.getElementById('meal-cal').value     = Math.round((ing.cal || 0) * srv);
-    document.getElementById('meal-protein').value = Math.round((ing.protein || 0) * srv * 10) / 10;
-    document.getElementById('meal-fat').value     = Math.round((ing.fat || 0) * srv * 10) / 10;
-    document.getElementById('meal-carbs').value   = Math.round((ing.carbs || 0) * srv * 10) / 10;
-    document.getElementById('meal-fiber').value   = Math.round((ing.fiber || 0) * srv * 10) / 10;
+    document.getElementById('meal-cal').value     = Math.round((Number(ing.cal) || 0) * srv);
+    document.getElementById('meal-protein').value = Math.round((Number(ing.protein) || 0) * srv * 10) / 10;
+    document.getElementById('meal-fat').value     = Math.round((Number(ing.fat) || 0) * srv * 10) / 10;
+    document.getElementById('meal-carbs').value   = Math.round((Number(ing.carbs) || 0) * srv * 10) / 10;
+    document.getElementById('meal-fiber').value   = Math.round((Number(ing.fiber) || 0) * srv * 10) / 10;
     const newHint = document.createElement('div');
     newHint.id = 'meal-avail-hint';
     newHint.style.cssText = 'font-size:0.72rem;margin-top:0.3rem;padding:0.3rem 0.6rem;border-radius:6px;background:rgba(122,180,232,0.1);color:#3a6ea0;';
     document.getElementById('meal-servings').parentNode.appendChild(newHint);
-    newHint.textContent = `Ingredient DB mode: 1 Serving = 100g/ml (${srv * 100}g total)`;
+    newHint.textContent = `Ingredient DB: 1 serving = 100g/ml (${srv * 100}g total)`;
+    // Show deduct section — find matching inventory item
+    const invItem = db.inventory.find(i => i.name.toLowerCase() === val);
+    const deductSection = document.getElementById('meal-deduct-section');
+    const deductDetail  = document.getElementById('meal-deduct-detail');
+    if (deductSection && deductDetail) {
+      deductSection.style.display = '';
+      if (invItem) {
+        const needed = srv * 100; // 1 serving = 100g in Ingredient DB
+        const hasEnough = Number(invItem.qty) >= needed;
+        deductDetail.textContent = `${invItem.name}: ${invItem.qty} ${invItem.unit} in stock · will deduct ${needed}${invItem.unit}`;
+        deductDetail.style.color = hasEnough ? '#3a6ea0' : 'var(--red)';
+        if (!hasEnough) deductDetail.textContent += ' ⚠ Not enough stock';
+      } else {
+        deductDetail.textContent = `"${document.getElementById('meal-name').value.trim()}" not found in Inventory — will skip deduction`;
+        deductDetail.style.color = 'var(--text3)';
+        document.getElementById('meal-deduct-inv').checked = false;
+      }
+    }
+  } else {
+    // Not found - hide deduct section, show hint
+    const _ds2 = document.getElementById('meal-deduct-section');
+    if (_ds2) _ds2.style.display = 'none';
+    const newHint = document.createElement('div');
+    newHint.id = 'meal-avail-hint';
+    newHint.style.cssText = 'font-size:0.72rem;margin-top:0.3rem;padding:0.3rem 0.6rem;border-radius:6px;background:rgba(240,160,96,0.1);color:var(--orange);';
+    document.getElementById('meal-servings').parentNode.appendChild(newHint);
+    newHint.textContent = `"${document.getElementById('meal-name').value.trim()}" not found in Cooking Log or Ingredients DB. Enter macros manually.`;
   }
 }
 function openMealAdd() {
@@ -2991,6 +3197,11 @@ function openMealAdd() {
   document.getElementById('meal-datetime').value = new Date(Date.now() - new Date().getTimezoneOffset()*60000).toISOString().slice(0,16);
   const hint = document.getElementById('meal-avail-hint');
   if (hint) hint.remove();
+  // Reset deduct section
+  const ds = document.getElementById('meal-deduct-section');
+  if (ds) { ds.style.display = 'none'; }
+  const dc = document.getElementById('meal-deduct-inv');
+  if (dc) dc.checked = true;
   openModal('modal-meal');
 }
 function openMealEdit(id) {
@@ -2998,6 +3209,9 @@ function openMealEdit(id) {
   if (!item) return;
   currentEditId = id;
   document.getElementById('modal-meal').querySelector('.modal-title').textContent = 'Edit Meal Log 🍽';
+  // Hide deduct section when editing (only deduct on new entries)
+  const ds = document.getElementById('meal-deduct-section');
+  if (ds) ds.style.display = 'none';
   document.getElementById('meal-name').value     = item.name     || '';
   document.getElementById('meal-datetime').value = item.datetime || '';
   document.getElementById('meal-type').value     = item.type     || 'Breakfast';
@@ -3012,45 +3226,103 @@ function openMealEdit(id) {
   openModal('modal-meal');
 }
 async function saveMeal() {
-  const name = document.getElementById('meal-name').value.trim();
-  if (!name) { showToast('Meal name required', 'error'); return; }
-  const servings = Number(document.getElementById('meal-servings').value)||1;
-  const dish = db.cooking.find(c => c.dish.toLowerCase() === name.toLowerCase());
-  const ing  = db.ingredientsDB.find(i => i.name.toLowerCase() === name.toLowerCase());
-  let calVal=Number(document.getElementById('meal-cal').value)||0, proteinVal=Number(document.getElementById('meal-protein').value)||0;
-  let fatVal=Number(document.getElementById('meal-fat').value)||0, carbsVal=Number(document.getElementById('meal-carbs').value)||0;
-  let fiberVal=Number(document.getElementById('meal-fiber').value)||0;
-  if (calVal === 0) {
-    if (dish) { const f=servings/dish.servings; calVal=Math.round(dish.cal*f); proteinVal=Math.round(dish.protein*f*10)/10; fatVal=Math.round(dish.fat*f*10)/10; carbsVal=Math.round(dish.carbs*f*10)/10; fiberVal=Math.round(dish.fiber*f*10)/10; }
-    else if (ing) { calVal=Math.round((ing.cal||0)*servings); proteinVal=Math.round((ing.protein||0)*servings*10)/10; fatVal=Math.round((ing.fat||0)*servings*10)/10; carbsVal=Math.round((ing.carbs||0)*servings*10)/10; fiberVal=Math.round((ing.fiber||0)*servings*10)/10; }
-  }
-  const mealPayload = {
-    name, datetime: document.getElementById('meal-datetime').value, type: document.getElementById('meal-type').value,
-    servings, cal: calVal, protein: proteinVal, fat: fatVal, carbs: carbsVal, fiber: fiberVal,
-    notes: document.getElementById('meal-notes').value, cookingId: dish ? dish.id : (ing ? "ingredient_db" : null)
-  };
-  if (currentEditId) {
-    const oldMeal = db.meals.find(m => m.id === currentEditId);
-    if (oldMeal && oldMeal.cookingId && oldMeal.cookingId !== "ingredient_db") {
-      const oldCook = db.cooking.find(c => c.id === oldMeal.cookingId);
-      if (oldCook) {
-        const currentAvail = (oldCook.availableServings !== undefined) ? oldCook.availableServings : oldCook.servings;
-        const restored = Math.min(oldCook.servings, currentAvail + (oldMeal.servings || 1));
-        await fbUpdate('cooking', oldCook.id, { availableServings: restored });
-      }
+  const btn = document.getElementById('btn-log-meal');
+  // Use setTimeout so iOS doesn't cancel the click handler before async work begins
+  setTimeout(() => { if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; } }, 0);
+  try {
+    const name = document.getElementById('meal-name').value.trim();
+    if (!name) { showToast('Meal name required', 'error'); return; }
+    const servings = Number(document.getElementById('meal-servings').value)||1;
+    const matches = db.cooking.filter(c => (c.dish||'').toLowerCase() === name.toLowerCase());
+    const dish = matches.find(c => Number(c.cal) > 0) || matches[0] || null;
+    const ing  = db.ingredientsDB.find(i => (i.name||'').toLowerCase() === name.toLowerCase());
+    let calVal=Number(document.getElementById('meal-cal').value)||0, proteinVal=Number(document.getElementById('meal-protein').value)||0;
+    let fatVal=Number(document.getElementById('meal-fat').value)||0, carbsVal=Number(document.getElementById('meal-carbs').value)||0;
+    let fiberVal=Number(document.getElementById('meal-fiber').value)||0;
+    if (calVal === 0) {
+      if (dish) { const f=servings/(Number(dish.servings)||1); calVal=Math.round((Number(dish.cal)||0)*f); proteinVal=Math.round((Number(dish.protein)||0)*f*10)/10; fatVal=Math.round((Number(dish.fat)||0)*f*10)/10; carbsVal=Math.round((Number(dish.carbs)||0)*f*10)/10; fiberVal=Math.round((Number(dish.fiber)||0)*f*10)/10; }
+      else if (ing) { calVal=Math.round((Number(ing.cal)||0)*servings); proteinVal=Math.round((Number(ing.protein)||0)*servings*10)/10; fatVal=Math.round((Number(ing.fat)||0)*servings*10)/10; carbsVal=Math.round((Number(ing.carbs)||0)*servings*10)/10; fiberVal=Math.round((Number(ing.fiber)||0)*servings*10)/10; }
     }
-    const res = await fbUpdate('meals', currentEditId, mealPayload);
-    if (res.ok) {
-      if (dish) { const currentAvail=(dish.availableServings!==undefined)?dish.availableServings:dish.servings; await fbUpdate('cooking',dish.id,{availableServings:Math.max(0,currentAvail-servings)}); }
-      closeModal('modal-meal'); showToast('Meal log updated!', 'success'); await loadAllData();
-    } else showToast('Failed to update meal', 'error');
-  } else {
-    mealPayload.id = uid(); mealPayload.addedBy = USERNAME;
-    const res = await fbAdd('meals', mealPayload);
-    if (res.ok) {
-      if (dish) { const currentAvail=(dish.availableServings!==undefined)?dish.availableServings:dish.servings; await fbUpdate('cooking',dish.id,{availableServings:Math.max(0,currentAvail-servings)}); }
-      closeModal('modal-meal'); showToast('Meal logged!', 'success'); await loadAllData();
-    } else showToast('Failed to save', 'error');
+    const mealPayload = {
+      name, datetime: document.getElementById('meal-datetime').value, type: document.getElementById('meal-type').value,
+      servings, cal: calVal, protein: proteinVal, fat: fatVal, carbs: carbsVal, fiber: fiberVal,
+      notes: document.getElementById('meal-notes').value, cookingId: dish ? dish.id : (ing ? "ingredient_db" : null)
+    };
+    if (currentEditId) {
+      const oldMeal = db.meals.find(m => m.id === currentEditId);
+      const res = await fbUpdate('meals', currentEditId, mealPayload);
+      if (res.ok) {
+        // Adjust cooking available servings: only the NET change, not restore+deduct separately
+        const oldCookId = oldMeal?.cookingId && oldMeal.cookingId !== "ingredient_db" ? oldMeal.cookingId : null;
+        const newCookId = dish ? dish.id : null;
+        if (oldCookId === newCookId && dish) {
+          // Same dish: just apply the delta between old and new servings
+          const delta = (oldMeal?.servings || 0) - servings; // positive = restore, negative = extra deduct
+          if (delta !== 0) {
+            const currentAvail = (dish.availableServings !== undefined) ? dish.availableServings : dish.servings;
+            const newAvail = Math.min(dish.servings, Math.max(0, currentAvail + delta));
+            await fbUpdate('cooking', dish.id, { availableServings: newAvail });
+          }
+          // delta === 0 means servings unchanged, no update needed
+        } else {
+          // Dish changed: restore old, deduct new
+          if (oldCookId) {
+            const oldCook = db.cooking.find(c => c.id === oldCookId);
+            if (oldCook) {
+              const oldAvail = (oldCook.availableServings !== undefined) ? oldCook.availableServings : oldCook.servings;
+              await fbUpdate('cooking', oldCook.id, { availableServings: Math.min(oldCook.servings, oldAvail + (oldMeal?.servings || 0)) });
+            }
+          }
+          if (dish) {
+            const currentAvail = (dish.availableServings !== undefined) ? dish.availableServings : dish.servings;
+            await fbUpdate('cooking', dish.id, { availableServings: Math.max(0, currentAvail - servings) });
+          }
+        }
+        closeModal('modal-meal'); showToast('Meal log updated!', 'success'); await loadAllData();
+      } else showToast('Failed to update meal — check connection/Firebase', 'error');
+    } else {
+      mealPayload.id = uid(); mealPayload.addedBy = USERNAME;
+      const res = await fbAdd('meals', mealPayload);
+      if (res.ok) {
+        // Deduct from Cooking Log if dish found
+        if (dish) {
+          const currentAvail = (dish.availableServings !== undefined) ? dish.availableServings : dish.servings;
+          await fbUpdate('cooking', dish.id, { availableServings: Math.max(0, currentAvail - servings) });
+          dish.availableServings = Math.max(0, currentAvail - servings);
+        }
+        // Deduct from Inventory if checkbox checked and item is from Ingredient DB (not Cooking Log)
+        if (!dish && ing) {
+          const shouldDeduct = document.getElementById('meal-deduct-inv')?.checked;
+          if (shouldDeduct) {
+            const invItem = db.inventory.find(i => i.name.toLowerCase() === name.toLowerCase());
+            if (invItem) {
+              // Ingredient DB: 1 serving = 100g/ml — convert servings to inventory unit
+              const consumedGrams = servings * 100;
+              const invGramsPerUnit = toGrams(1, invItem.unit, invItem.name);
+              const deductInInvUnit = invGramsPerUnit > 0 ? consumedGrams / invGramsPerUnit : consumedGrams;
+              const newQty = Math.max(0, Math.round((Number(invItem.qty) - deductInInvUnit) * 1000) / 1000);
+              await fbUpdate('inventory', invItem.id, { qty: newQty });
+              invItem.qty = newQty;
+              showToast(`Meal logged ✓ · Inventory: ${invItem.name} −${Math.round(deductInInvUnit * 100) / 100} ${invItem.unit}`, 'success');
+            } else {
+              showToast('Meal logged ✓ · Item not found in inventory (skipped deduction)', 'success');
+            }
+          } else {
+            showToast('Meal logged ✓ (inventory not deducted)', 'success');
+          }
+        } else if (dish) {
+          showToast('Meal logged! ✓', 'success');
+        } else {
+          showToast('Meal logged! ✓', 'success');
+        }
+        closeModal('modal-meal'); await loadAllData();
+      } else showToast('Failed to save — check connection/Firebase', 'error');
+    }
+  } catch(e) {
+    console.error('saveMeal error:', e);
+    showToast('Error: ' + e.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Log Meal'; }
   }
 }
 function renderMeals() {
@@ -3082,11 +3354,11 @@ function renderMeals() {
   const totCal = items.reduce((s,m)=>s+(m.cal||0),0);
   if(summary) summary.textContent = items.length ? `${items.length} entri · ${totCal} kcal` : '';
 
-  if (!items.length) { wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">🍽</div><p>Tidak ada meal untuk periode ini.</p></div>'; return; }
+  if (!items.length) { wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">🍽</div><p>No meals for this period.</p></div>'; return; }
 
   const typeColor = { Breakfast:'badge-orange', Lunch:'badge-green', Dinner:'badge-blue', Snack:'badge-purple' };
   wrap.innerHTML = `<table class="data-table"><thead><tr>
-    <th>Meal</th><th>Waktu</th><th>Tipe</th><th>Srv</th><th>Kalori</th><th>Protein</th><th>Carbs</th><th>Fat</th><th>By</th><th>Actions</th>
+    <th>Meal</th><th>Time</th><th>Type</th><th>Srv</th><th>Calories</th><th>Protein</th><th>Carbs</th><th>Fat</th><th>By</th><th>Actions</th>
   </tr></thead><tbody>${items.map(i => {
     const timeStr = i.datetime ? (() => { try { return new Date(i.datetime).toLocaleString('id-ID',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); } catch(e) { return i.datetime; } })() : '—';
     const tc = typeColor[i.type] || 'badge-grey';
@@ -3120,86 +3392,616 @@ function renderMeals() {
 // ============================================================
 // GROCERY SHOPPING MODULE
 // ============================================================
+// ============================================================
+// SPENDING — ENHANCED
+// ============================================================
+let spendItemType = 'grocery'; // 'grocery' | 'takeout'
+let spendSortCol  = 'date';
+let spendSortDir  = 'desc';    // 'asc'|'desc'|'reset'
+let spendCatActive = null;     // clicked category filter from chart
+
+const SPEND_CATS = ['Sayuran','Buah','Protein/Daging','Seafood','Dairy/Telur','Bumbu Dapur','Karbohidrat/Biji','Minyak/Lemak','Snacks','Minuman','Lainnya'];
+const CAT_COLORS = ['#7ecba0','#f0c060','#e8926a','#7ab4e8','#f0a060','#c89060','#b4a0d8','#f0d060','#e8a0b8','#80c0d0','#c0b0a0'];
+
+// ── Date Range helpers ────────────────────────────────────────
+function setSpendRange(preset) {
+  const today = new Date().toISOString().split('T')[0];
+  let start;
+  if (preset === -1) { // All time
+    start = '2000-01-01';
+  } else if (preset === 0) { // This month
+    const d = new Date(); d.setDate(1);
+    start = d.toISOString().split('T')[0];
+  } else { // N days ago
+    const d = new Date(); d.setDate(d.getDate() - preset + 1);
+    start = d.toISOString().split('T')[0];
+  }
+  document.getElementById('spend-range-start').value = start;
+  document.getElementById('spend-range-end').value   = today;
+  renderSpending();
+}
+
+function getSpendRange() {
+  const s = document.getElementById('spend-range-start').value;
+  const e = document.getElementById('spend-range-end').value;
+  const today = new Date().toISOString().split('T')[0];
+  return { start: s || '2000-01-01', end: e || today };
+}
+
+function initSpendRange() {
+  const today = new Date().toISOString().split('T')[0];
+  const d = new Date(); d.setDate(d.getDate() - 6);
+  document.getElementById('spend-range-start').value = d.toISOString().split('T')[0];
+  document.getElementById('spend-range-end').value   = today;
+}
+
+// ── Item type toggle ──────────────────────────────────────────
+function setSpendType(type) {
+  spendItemType = type;
+  document.getElementById('stype-grocery-btn').classList.toggle('active', type === 'grocery');
+  document.getElementById('stype-takeout-btn').classList.toggle('active', type === 'takeout');
+  document.getElementById('spend-takeout-section').style.display = type === 'takeout' ? '' : 'none';
+  // Takeout: hide add-meal sub-row based on checkbox
+  if (type === 'takeout') updateTakeoutMealRow();
+}
+function updateTakeoutMealRow() {
+  const checked = document.getElementById('spend-add-meal').checked;
+  document.getElementById('spend-meal-type-row').style.display = checked ? '' : 'none';
+}
+
+// ── Nutrition panel toggle ────────────────────────────────────
+function toggleSpendNutrition() {
+  const panel = document.getElementById('spend-nutrition-panel');
+  const arrow = document.getElementById('spend-nutrition-arrow');
+  const open  = panel.style.display === 'none';
+  panel.style.display = open ? '' : 'none';
+  arrow.textContent   = open ? '▲' : '▼';
+}
+function spendCalcTotal() {
+  const qty  = parseFloat(document.getElementById('spend-qty').value)  || 0;
+  const spp  = parseFloat(document.getElementById('spend-servings-per-pack').value) || 0;
+  const ss   = parseFloat(document.getElementById('spend-serving-size').value) || 0;
+  const cal  = parseFloat(document.getElementById('spend-cal-per-serving').value) || 0;
+  const prot = parseFloat(document.getElementById('spend-prot-per-serving').value) || 0;
+  const el   = document.getElementById('spend-nutrition-calc');
+  if (!el) return;
+  if (spp && ss && qty) {
+    const totalG   = spp * ss * qty;
+    const totalCal = spp * cal * qty;
+    el.textContent = `→ Total: ${totalG}g | ${Math.round(totalCal)} kcal | ${Math.round(prot*spp*qty)}g protein per purchase`;
+  } else { el.textContent = ''; }
+}
+
+// ── Name suggestions from ingredients library ─────────────────
+function spendNameSuggest(q) {
+  const box = document.getElementById('spend-name-suggestions');
+  if (!q || q.length < 2) { box.style.display = 'none'; return; }
+  const matches = (db.ingredientsDB || []).filter(i => (i.name||'').toLowerCase().includes(q.toLowerCase())).slice(0, 6);
+  if (!matches.length) { box.style.display = 'none'; return; }
+  box.style.display = '';
+  box.innerHTML = matches.map(m => `<div onclick="spendSelectSuggestion(${JSON.stringify(m.name)},${JSON.stringify(m)})"
+    style="padding:0.4rem 0.75rem;cursor:pointer;font-size:0.8rem;border-bottom:1px solid var(--border);"
+    onmouseenter="this.style.background='var(--surface2)'" onmouseleave="this.style.background=''">
+    <strong>${esc(m.name)}</strong>
+    ${(m.calPer100||m.cal) ? `<span style="float:right;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--text3);">${m.calPer100||m.cal} kcal/100g</span>` : ''}
+  </div>`).join('');
+}
+function spendSelectSuggestion(name, item) {
+  document.getElementById('spend-desc').value = name;
+  document.getElementById('spend-name-suggestions').style.display = 'none';
+  // Pre-fill nutrition if available
+  const _cal100 = item.calPer100 || item.cal || 0;
+  if (_cal100) {
+    document.getElementById('spend-nutrition-panel').style.display = '';
+    document.getElementById('spend-nutrition-arrow').textContent = '▲';
+    if (item.proteinPer100||item.protein) document.getElementById('spend-prot-per-serving').value  = item.proteinPer100||item.protein||0;
+    if (item.carbsPer100||item.carbs)     document.getElementById('spend-carbs-per-serving').value  = item.carbsPer100||item.carbs||0;
+    if (item.fatPer100||item.fat)         document.getElementById('spend-fat-per-serving').value    = item.fatPer100||item.fat||0;
+    document.getElementById('spend-cal-per-serving').value = _cal100;
+  }
+}
+
+// ── Modal open/close ──────────────────────────────────────────
 function openSpendingAdd() {
   currentEditId = null;
-  document.getElementById('modal-spending').querySelector('.modal-title').textContent = 'Add Grocery Item 🛒';
-  ['spend-desc','spend-amount','spend-qty'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('modal-spending-title').textContent = 'Add Food Item 🛒';
+  ['spend-desc','spend-amount','spend-qty','spend-serving-size','spend-servings-per-pack',
+   'spend-cal-per-serving','spend-prot-per-serving','spend-carbs-per-serving','spend-fat-per-serving'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
   document.getElementById('spend-cat').value  = 'Sayuran';
   document.getElementById('spend-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('spend-nutrition-panel').style.display = 'none';
+  document.getElementById('spend-nutrition-arrow').textContent   = '▼';
+  document.getElementById('spend-add-meal').checked = true;
+  document.getElementById('spend-name-suggestions').style.display = 'none';
+  document.getElementById('spend-nutrition-calc').textContent = '';
+  setSpendType('grocery');
   injectCustomUnits('spend-unit');
-  setUnitSelect('spend-unit', 'kg');
+  setUnitSelect('spend-unit', 'pack');
   openModal('modal-spending');
 }
+
 function openSpendingEdit(id) {
   const item = db.spending.find(s => s.id === id);
   if (!item) return;
   currentEditId = id;
-  document.getElementById('modal-spending').querySelector('.modal-title').textContent = 'Edit Grocery Item 🛒';
+  document.getElementById('modal-spending-title').textContent = 'Edit Food Item 🛒';
   document.getElementById('spend-desc').value   = item.desc     || '';
   document.getElementById('spend-qty').value    = item.qty      || '';
   document.getElementById('spend-amount').value = item.amount   || '';
   document.getElementById('spend-date').value   = item.date     || '';
   document.getElementById('spend-cat').value    = item.category || 'Sayuran';
+  document.getElementById('spend-nutrition-panel').style.display = 'none';
+  document.getElementById('spend-nutrition-arrow').textContent   = '▼';
+  document.getElementById('spend-name-suggestions').style.display = 'none';
+  setSpendType(item.itemType || 'grocery');
   injectCustomUnits('spend-unit');
-  setUnitSelect('spend-unit', item.unit || 'kg');
+  setUnitSelect('spend-unit', item.unit || 'pack');
   openModal('modal-spending');
 }
+
+// ── Save ─────────────────────────────────────────────────────
 async function saveSpending() {
-  const desc=document.getElementById('spend-desc').value.trim(), amount=document.getElementById('spend-amount').value;
-  const qty=document.getElementById('spend-qty').value, unit=document.getElementById('spend-unit').value;
-  const date=document.getElementById('spend-date').value, category=document.getElementById('spend-cat').value;
+  const desc     = document.getElementById('spend-desc').value.trim();
+  const amount   = document.getElementById('spend-amount').value;
+  const qty      = document.getElementById('spend-qty').value;
+  const unit     = document.getElementById('spend-unit').value;
+  const date     = document.getElementById('spend-date').value;
+  const category = document.getElementById('spend-cat').value;
+  const itemType = spendItemType;
   if (!desc || !amount) { showToast('Item name and price are required', 'error'); return; }
+
+  // Nutrition fields
+  const servingSize    = parseFloat(document.getElementById('spend-serving-size').value) || null;
+  const servingsPerPack= parseFloat(document.getElementById('spend-servings-per-pack').value) || null;
+  const calPerServing  = parseFloat(document.getElementById('spend-cal-per-serving').value) || null;
+  const protPerServing = parseFloat(document.getElementById('spend-prot-per-serving').value) || null;
+  const carbsPerServing= parseFloat(document.getElementById('spend-carbs-per-serving').value) || null;
+  const fatPerServing  = parseFloat(document.getElementById('spend-fat-per-serving').value) || null;
+  const saveToLib      = document.getElementById('spend-save-to-lib').checked;
+  const addToMeal      = itemType === 'takeout' && document.getElementById('spend-add-meal').checked;
+  const mealType       = document.getElementById('spend-meal-type').value;
+
+  // Derive calPer100 if possible
+  let calPer100 = null, protPer100 = null, carbsPer100 = null, fatPer100 = null;
+  if (servingSize && calPerServing) {
+    calPer100   = Math.round((calPerServing  / servingSize) * 100);
+    protPer100  = protPerServing  ? Math.round((protPerServing  / servingSize) * 100 * 10) / 10 : null;
+    carbsPer100 = carbsPerServing ? Math.round((carbsPerServing / servingSize) * 100 * 10) / 10 : null;
+    fatPer100   = fatPerServing   ? Math.round((fatPerServing   / servingSize) * 100 * 10) / 10 : null;
+  }
+
+  const nutritionData = servingSize ? { servingSize, servingsPerPack, calPerServing, protPerServing, carbsPerServing, fatPerServing, calPer100, protPer100, carbsPer100, fatPer100 } : {};
+
   if (currentEditId) {
-    const oldSpend = db.spending.find(s => s.id === currentEditId);
-    const updatedSpend = { desc, qty: qty||'', unit, amount: Number(amount), date, category };
+    // EDIT MODE
+    const updatedSpend = { desc, qty: qty||'', unit, amount: Number(amount), date, category, itemType, ...nutritionData };
     const res = await fbUpdate('spending', currentEditId, updatedSpend);
     if (res.ok) {
-      if (oldSpend && oldSpend.inventoryId) await fbUpdate('inventory', oldSpend.inventoryId, { name:desc, qty:Number(qty)||0, unit, purchaseDate:date, category });
-      closeModal('modal-spending'); showToast('Grocery item updated!', 'success'); await loadAllData();
-    } else showToast('Failed to update grocery', 'error');
-  } else {
+      const oldSpend = db.spending.find(s => s.id === currentEditId);
+      if (oldSpend?.inventoryId && itemType === 'grocery') {
+        await fbUpdate('inventory', oldSpend.inventoryId, { name:desc, qty:Number(qty)||0, unit, purchaseDate:date, category });
+      }
+      closeModal('modal-spending'); showToast('Item updated!', 'success'); await loadAllData();
+    } else showToast('Failed to update', 'error');
+    return;
+  }
+
+  // ADD MODE
+  const spendData = { id:uid(), desc, qty:qty||'', unit, amount:Number(amount), date, category, itemType, addedBy:USERNAME, ...nutritionData };
+
+  // Save to Ingredients Library if nutrition data provided
+  if (saveToLib && calPer100) {
+    const existing = (db.ingredientsDB||[]).find(i => i.name.toLowerCase() === desc.toLowerCase());
+    if (!existing) {
+      const libEntry = { id:uid(), name:desc, unit:'g', calPer100, proteinPer100:protPer100, carbsPer100, fatPer100, category, addedBy:USERNAME };
+      await fbAdd('ingredientsDB', libEntry);
+    }
+  }
+
+  if (itemType === 'grocery') {
+    // → Inventory
     const inventoryId = uid();
-    const spendData = { id:uid(), desc, qty:qty||'', unit, amount:Number(amount), date, category, addedBy:USERNAME, inventoryId };
+    spendData.inventoryId = inventoryId;
     const res = await fbAdd('spending', spendData);
     if (res.ok) {
       const invData = { id:inventoryId, name:desc, qty:Number(qty)||0, unit, purchaseDate:date, notes:'', addedBy:USERNAME, category, spendingId:spendData.id };
       await fbAdd('inventory', invData);
-      closeModal('modal-spending'); showToast('Item saved & added to inventory!', 'success'); await loadAllData();
+      closeModal('modal-spending'); showToast('Item saved → Inventory!', 'success'); await loadAllData();
     } else showToast('Failed to save', 'error');
+
+  } else {
+    // Takeout
+    const res = await fbAdd('spending', spendData);
+    if (!res.ok) { showToast('Failed to save', 'error'); return; }
+
+    if (addToMeal) {
+      // → Meal Log
+      const totalCal  = calPerServing && servingsPerPack ? calPerServing * servingsPerPack : (calPer100 && qty ? calPer100 * Number(qty) / 100 : 0);
+      const totalProt = protPerServing && servingsPerPack ? protPerServing * servingsPerPack : (protPer100 && qty ? protPer100 * Number(qty) / 100 : 0);
+      const mealEntry = {
+        id: uid(), name: desc, type: mealType, datetime: date + 'T12:00',
+        cal: Math.round(totalCal), protein: Math.round(totalProt*10)/10,
+        carbs: 0, fat: 0, fiber: 0, servings: 1, addedBy: USERNAME, source: 'takeout',
+      };
+      await fbAdd('meals', mealEntry);
+      closeModal('modal-spending'); showToast('Takeout saved → Meal Log!', 'success'); await loadAllData();
+    } else {
+      // → Cooking log as ready meal
+      const cookEntry = {
+        id: uid(), dish: desc, date, servings: 1, availableServings: 1,
+        cal: 0, protein: 0, fat: 0, carbs: 0, fiber: 0,
+        ingredients: '[]', notes: 'Ready meal (takeout)', addedBy: USERNAME, source: 'takeout',
+      };
+      await fbAdd('cooking', cookEntry);
+      closeModal('modal-spending'); showToast('Takeout saved → Cooking Log!', 'success'); await loadAllData();
+    }
   }
 }
-function formatIDR(n) { return 'Rp ' + Number(n).toLocaleString('id-ID'); }
-function renderSpending() {
-  const now = new Date();
-  const thisMonth=now.getMonth(), thisYear=now.getFullYear(), weekAgo=new Date(now-7*86400000);
-  let monthTotal=0, weekTotal=0, allTotal=0;
-  db.spending.forEach(s => {
-    const d = new Date(s.date); allTotal += s.amount;
-    if (d.getMonth()===thisMonth && d.getFullYear()===thisYear) monthTotal += s.amount;
-    if (d >= weekAgo) weekTotal += s.amount;
+
+// ── OCR Flow (Tesseract.js) ───────────────────────────────────
+function openOCRModal() {
+  document.getElementById('ocr-upload-section').style.display = '';
+  document.getElementById('ocr-processing').style.display     = 'none';
+  document.getElementById('ocr-results-section').style.display= 'none';
+  document.getElementById('ocr-actions').style.display        = 'none';
+  document.getElementById('ocr-items-list').innerHTML         = '';
+  const inp = document.getElementById('ocr-file-input'); if(inp) inp.value='';
+  openModal('modal-ocr');
+}
+
+async function handleOCRUpload(input) {
+  if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
+
+  document.getElementById('ocr-upload-section').style.display = 'none';
+  document.getElementById('ocr-processing').style.display     = '';
+  document.getElementById('ocr-status-text').textContent      = 'Memuat Tesseract OCR...';
+  document.getElementById('ocr-progress-bar').style.width     = '0%';
+
+  try {
+    // Lazy-load Tesseract.js from CDN if not already loaded
+    if (typeof Tesseract === 'undefined') {
+      await new Promise((res, rej) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.0/tesseract.min.js';
+        s.onload = res; s.onerror = rej;
+        document.head.appendChild(s);
+      });
+    }
+
+    document.getElementById('ocr-status-text').textContent = 'Mengenali teks dari gambar...';
+
+    const result = await Tesseract.recognize(file, 'ind+eng', {
+      logger: m => {
+        if (m.status === 'recognizing text') {
+          const pct = Math.round((m.progress || 0) * 100);
+          document.getElementById('ocr-progress-bar').style.width = pct + '%';
+          document.getElementById('ocr-status-text').textContent  = `Mengenali teks... ${pct}%`;
+        }
+      }
+    });
+
+    const rawText = result.data.text;
+    console.log('Tesseract raw text:', rawText);
+
+    const items = parseReceiptText(rawText);
+    showOCRResults(items);
+
+  } catch(e) {
+    console.error('Tesseract error:', e);
+    showOCRResults([]);
+    showToast(`OCR gagal: ${e.message}`, 'error');
+  }
+
+  document.getElementById('ocr-processing').style.display = 'none';
+}
+
+function parseReceiptText(rawText) {
+  // Parse lines from OCR text into grocery items
+  const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 1);
+  const items = [];
+  // Regex: match lines that contain a price (number possibly with dots/commas, at least 3 digits)
+  const priceRe = /(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{1,2})?|\d{4,})/g;
+  // Known unit keywords
+  const unitMap = { kg:['kg','kilo'], gram:['gr','gram','g'], ml:['ml'], L:['ltr','liter','l'], pcs:['pcs','pc','ea'], pack:['pck','pack','pak','bks','box','btl','bungkus'], buah:['buah','bh'], sachet:['sachet','scht'] };
+
+  lines.forEach(line => {
+    // Skip lines that are just numbers (totals, dates, etc.) or very short
+    if (/^\d[\d\s.,]*$/.test(line)) return;
+    // Skip common receipt noise
+    if (/total|subtotal|pajak|tax|ppn|diskon|discount|kembalian|change|tunai|cash|debit|kredit|bayar|struk|terima kasih|thank/i.test(line)) return;
+
+    const prices = line.match(priceRe);
+    if (!prices) return;
+
+    // Last numeric token is likely the price
+    const priceRaw = prices[prices.length - 1].replace(/[.,](?=\d{3})/g, '').replace(',', '.');
+    const price = parseInt(priceRaw, 10);
+    if (!price || price < 100) return; // skip tiny numbers (not IDR prices)
+
+    // Name = text before the price token
+    const priceIdx = line.lastIndexOf(prices[prices.length - 1]);
+    let name = line.substring(0, priceIdx).trim().replace(/[*@x\d.,]+$/, '').trim();
+    if (!name || name.length < 2) return;
+
+    // Detect qty & unit from name
+    let qty = 1;
+    let unit = 'pack';
+    const qtyMatch = name.match(/(\d+(?:[.,]\d+)?)\s*(kg|gr|gram|g|ml|ltr|liter|l|pcs|pc|ea|pck|pack|pak|bks|box|btl|bungkus|buah|bh|sachet|scht)\b/i);
+    if (qtyMatch) {
+      qty = parseFloat(qtyMatch[1].replace(',', '.'));
+      const rawUnit = qtyMatch[2].toLowerCase();
+      for (const [u, aliases] of Object.entries(unitMap)) {
+        if (aliases.includes(rawUnit)) { unit = u; break; }
+      }
+      name = name.replace(qtyMatch[0], '').trim();
+    }
+
+    // Guess category
+    let category = 'Lainnya';
+    const n = name.toLowerCase();
+    if (/telur|susu|keju|yogurt|butter|mentega/.test(n)) category = 'Dairy/Telur';
+    else if (/ayam|daging|sapi|babi|kambing|ikan|udang|cumi|seafood/.test(n)) category = 'Protein/Daging';
+    else if (/beras|mie|pasta|roti|tepung|oat|quinoa/.test(n)) category = 'Karbohidrat/Biji';
+    else if (/sayur|kangkung|bayam|wortel|kubis|brokoli|timun|tomat|buncis/.test(n)) category = 'Sayuran';
+    else if (/buah|apel|mangga|jeruk|pisang|anggur|melon|semangka/.test(n)) category = 'Buah';
+    else if (/garam|gula|merica|bawang|cabai|kunyit|jahe|kemiri|kecap|saus|cuka/.test(n)) category = 'Bumbu Dapur';
+    else if (/minyak|santan|margarin/.test(n)) category = 'Minyak/Lemak';
+    else if (/air|jus|teh|kopi|soda|minuman|drinks/.test(n)) category = 'Minuman';
+    else if (/snack|keripik|biskuit|coklat|permen|wafer|chips/.test(n)) category = 'Snacks';
+
+    items.push({ name: name.replace(/\s+/g, ' '), qty, unit, price, category, type: 'grocery' });
   });
-  document.getElementById('spend-month').textContent = formatIDR(monthTotal);
-  document.getElementById('spend-week').textContent  = formatIDR(weekTotal);
-  document.getElementById('spend-all').textContent   = formatIDR(allTotal);
+
+  return items;
+}
+
+function showOCRResults(items) {
+  document.getElementById('ocr-results-section').style.display = '';
+  document.getElementById('ocr-actions').style.display = '';
+  const list = document.getElementById('ocr-items-list');
+  list.innerHTML = '';
+  const toShow = items.length ? items : [{ name:'', qty:1, unit:'pack', price:'', category:'Lainnya', type:'grocery' }];
+  toShow.forEach(item => addOCRItemRow(item));
+}
+
+function addOCRItemRow(item={}) {
+  document.getElementById('ocr-results-section').style.display = '';
+  document.getElementById('ocr-actions').style.display = '';
+  const list = document.getElementById('ocr-items-list');
+  const row = document.createElement('div');
+  row.className = 'ocr-item-row';
+  row.style.cssText = 'display:grid;grid-template-columns:2fr 0.7fr 0.8fr 1fr 1.2fr 0.5fr;gap:0.3rem;margin-bottom:0.35rem;align-items:center;';
+  row.innerHTML = `
+    <input type="text" value="${esc(item.name||'')}" placeholder="Item name" style="font-size:0.78rem;padding:0.3rem 0.4rem;"/>
+    <input type="number" value="${item.qty||1}" placeholder="Qty" style="font-size:0.78rem;padding:0.3rem 0.4rem;"/>
+    <select style="font-size:0.72rem;padding:0.3rem 0.3rem;">
+      ${['pack','kg','gram','ml','L','pcs','buah','sachet'].map(u=>`<option${u===(item.unit||'pack')?' selected':''}>${u}</option>`).join('')}
+    </select>
+    <input type="number" value="${item.price||''}" placeholder="Price IDR" style="font-size:0.78rem;padding:0.3rem 0.4rem;"/>
+    <select style="font-size:0.72rem;padding:0.3rem 0.3rem;">
+      ${SPEND_CATS.map(c=>`<option${c===item.category?' selected':''}>${c}</option>`).join('')}
+    </select>
+    <button onclick="this.parentElement.remove()" class="btn btn-danger btn-sm" style="padding:0.2rem 0.4rem;">✕</button>`;
+  list.appendChild(row);
+}
+
+async function saveAllOCRItems() {
+  const rows = document.querySelectorAll('#ocr-items-list .ocr-item-row');
+  if (!rows.length) { showToast('No items to save', 'error'); return; }
+  const today = new Date().toISOString().split('T')[0];
+  let savedCount = 0;
+  for (const row of rows) {
+    const inputs = row.querySelectorAll('input, select');
+    const name     = inputs[0].value.trim();
+    const qty      = inputs[1].value;
+    const unit     = inputs[2].value;
+    const price    = inputs[3].value;
+    const category = inputs[4].value;
+    if (!name || !price) continue;
+    const inventoryId = uid();
+    const spendData = { id:uid(), desc:name, qty:qty||'1', unit, amount:Number(price), date:today, category, itemType:'grocery', addedBy:USERNAME, inventoryId };
+    const res = await fbAdd('spending', spendData);
+    if (res.ok) {
+      await fbAdd('inventory', { id:inventoryId, name, qty:Number(qty)||1, unit, purchaseDate:today, notes:'From receipt scan', addedBy:USERNAME, category, spendingId:spendData.id });
+      savedCount++;
+    }
+  }
+  closeModal('modal-ocr');
+  showToast(`${savedCount} items saved from receipt!`, 'success');
+  await loadAllData();
+}
+
+// ── Category chart filter ─────────────────────────────────────
+function clearSpendCatFilter() {
+  spendCatActive = null;
+  document.getElementById('spend-cat-filter').value = 'all';
+  renderSpending();
+}
+
+// ── Analytics charts ─────────────────────────────────────────
+function renderSpendCategoryChart(items) {
+  const wrap = document.getElementById('spend-cat-chart');
+  if (!wrap) return;
+  const totBycat = {};
+  items.forEach(i => { totBycat[i.category] = (totBycat[i.category]||0) + i.amount; });
+  const sorted = Object.entries(totBycat).sort((a,b)=>b[1]-a[1]);
+  if (!sorted.length) { wrap.innerHTML = '<div style="color:var(--text3);font-size:0.78rem;padding:0.5rem;">No data in range.</div>'; return; }
+  const max = sorted[0][1];
+  wrap.innerHTML = sorted.map(([cat, total], idx) => {
+    const pct = Math.round((total/max)*100);
+    const color = CAT_COLORS[SPEND_CATS.indexOf(cat) % CAT_COLORS.length] || '#c0b0a0';
+    const isActive = spendCatActive === cat;
+    return `<div onclick="spendClickCat('${cat}')" style="margin-bottom:0.35rem;cursor:pointer;padding:0.15rem 0.25rem;border-radius:4px;background:${isActive?'var(--accent-dim)':'transparent'};">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.15rem;">
+        <span style="font-size:0.72rem;font-weight:600;color:var(--text);">${esc(cat)}</span>
+        <span style="font-size:0.72rem;font-family:'DM Mono',monospace;color:var(--text2);">${formatIDR(total)}</span>
+      </div>
+      <div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden;">
+        <div style="height:100%;width:${pct}%;background:${color};border-radius:4px;transition:width 0.4s;"></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function spendClickCat(cat) {
+  if (spendCatActive === cat) { spendCatActive = null; document.getElementById('spend-cat-filter').value = 'all'; }
+  else { spendCatActive = cat; document.getElementById('spend-cat-filter').value = cat; }
+  renderSpending();
+}
+
+function renderSpendTypeChart(items) {
+  const wrap = document.getElementById('spend-type-chart');
+  if (!wrap) return;
+  let groceryTotal = 0, takeoutTotal = 0;
+  items.forEach(i => { if (i.itemType==='takeout') takeoutTotal+=i.amount; else groceryTotal+=i.amount; });
+  const total = groceryTotal + takeoutTotal || 1;
+  const groceryPct = Math.round((groceryTotal/total)*100);
+  const takeoutPct = 100 - groceryPct;
+  wrap.innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:0.6rem;">
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.25rem;">
+          <span style="font-size:0.78rem;font-weight:600;color:var(--text);">🛒 Grocery</span>
+          <span style="font-size:0.78rem;font-family:'DM Mono',monospace;color:var(--green);">${formatIDR(groceryTotal)} <span style="color:var(--text3);">(${groceryPct}%)</span></span>
+        </div>
+        <div style="height:12px;background:var(--border);border-radius:6px;overflow:hidden;">
+          <div style="height:100%;width:${groceryPct}%;background:var(--green);border-radius:6px;transition:width 0.4s;"></div>
+        </div>
+      </div>
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.25rem;">
+          <span style="font-size:0.78rem;font-weight:600;color:var(--text);">🥡 Takeout</span>
+          <span style="font-size:0.78rem;font-family:'DM Mono',monospace;color:var(--orange);">${formatIDR(takeoutTotal)} <span style="color:var(--text3);">(${takeoutPct}%)</span></span>
+        </div>
+        <div style="height:12px;background:var(--border);border-radius:6px;overflow:hidden;">
+          <div style="height:100%;width:${takeoutPct}%;background:var(--orange);border-radius:6px;transition:width 0.4s;"></div>
+        </div>
+      </div>
+      <div style="font-size:0.72rem;color:var(--text3);font-family:'DM Mono',monospace;text-align:center;padding-top:0.25rem;">
+        ${groceryTotal>takeoutTotal?'🏠 More home cooking this period ✅':'🥡 Mostly takeout this period'}
+      </div>
+    </div>`;
+}
+
+// ── Main render ───────────────────────────────────────────────
+function formatIDR(n) { return 'Rp ' + Number(n).toLocaleString('id-ID'); }
+
+function renderSpending() {
+  const { start, end } = getSpendRange();
+  const catFilter  = (spendCatActive) || (document.getElementById('spend-cat-filter')?.value || 'all');
+  const typeFilter = document.getElementById('spend-type-filter')?.value || 'all';
+  const search     = (document.getElementById('spend-search')?.value || '').toLowerCase().trim();
+
+  // All items in range
+  const inRange = db.spending.filter(s => {
+    if (!s.date) return false;
+    return s.date >= start && s.date <= end;
+  });
+
+  // KPIs
+  let rangeTotal=0, groceryTotal=0, takeoutTotal=0;
+  inRange.forEach(s => {
+    rangeTotal  += s.amount;
+    if (s.itemType==='takeout') takeoutTotal += s.amount; else groceryTotal += s.amount;
+  });
+  const days = Math.max(1, Math.round((new Date(end)-new Date(start))/86400000)+1);
+  const avgPerDay = rangeTotal / days;
+
+  const rangeEl = document.getElementById('spend-range-total');
+  if (rangeEl) rangeEl.textContent = formatIDR(rangeTotal);
+  const gEl = document.getElementById('spend-grocery-total');
+  const tEl = document.getElementById('spend-takeout-total');
+  const gPctEl = document.getElementById('spend-grocery-pct');
+  const tPctEl = document.getElementById('spend-takeout-pct');
+  if (gEl) gEl.textContent = formatIDR(groceryTotal);
+  if (tEl) tEl.textContent = formatIDR(takeoutTotal);
+  if (gPctEl) gPctEl.textContent = rangeTotal ? `${Math.round(groceryTotal/rangeTotal*100)}% of total` : '—';
+  if (tPctEl) tPctEl.textContent = rangeTotal ? `${Math.round(takeoutTotal/rangeTotal*100)}% of total` : '—';
+  const icEl = document.getElementById('spend-item-count');
+  const adEl = document.getElementById('spend-avg-per-day');
+  if (icEl) icEl.textContent = inRange.length;
+  if (adEl) adEl.textContent = `${formatIDR(Math.round(avgPerDay))}/day avg`;
+  const rangeLabel = document.getElementById('spend-range-label');
+  if (rangeLabel) rangeLabel.textContent = `${start} – ${end}`;
+
+  // Update old stat elements if present (legacy compat)
+  ['spend-month','spend-week','spend-all'].forEach(id => { const el=document.getElementById(id); if(el) el.textContent='—'; });
+
+  // Charts (use full inRange, not filtered)
+  renderSpendCategoryChart(inRange);
+  renderSpendTypeChart(inRange);
+
+  // Filtered table items
+  let items = [...inRange];
+  if (catFilter  !== 'all') items = items.filter(s => s.category === catFilter);
+  if (typeFilter !== 'all') items = items.filter(s => (s.itemType||'grocery') === typeFilter);
+  if (search) items = items.filter(s => (s.desc||'').toLowerCase().includes(search));
+
+  // Sort
+  if (spendSortDir !== 'reset') {
+    items.sort((a,b) => {
+      let va = a[spendSortCol]||'', vb = b[spendSortCol]||'';
+      if (spendSortCol === 'amount') { va=Number(va); vb=Number(vb); }
+      const cmp = va < vb ? -1 : va > vb ? 1 : 0;
+      return spendSortDir === 'asc' ? cmp : -cmp;
+    });
+  } else {
+    items.sort((a,b) => (b.date||'').localeCompare(a.date||''));
+  }
+
+  const countEl = document.getElementById('spend-filtered-count');
+  if (countEl) countEl.textContent = `${items.length} items`;
+
   const wrap = document.getElementById('spending-table-wrap');
-  if (!db.spending.length) { wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">🛒</div><p>Belum ada catatan belanja.</p></div>'; return; }
-  const catFilter = document.getElementById('spend-cat-filter')?.value || 'all';
-  let items = [...db.spending];
-  if (catFilter !== 'all') items = items.filter(s => s.category === catFilter);
-  items.sort((a,b) => (b.date||'').localeCompare(a.date||''));
+  if (!items.length) {
+    wrap.innerHTML = `<div class="empty-state"><div class="empty-icon">${catFilter!=='all'||typeFilter!=='all'?'🔍':'🛒'}</div><p>${catFilter!=='all'||typeFilter!=='all'?'No items match your filter.':'No records in this period.'}</p></div>`;
+    return;
+  }
+
+  function sortTh(col, label) {
+    const isActive = spendSortCol===col;
+    const arrow = !isActive?'↕':spendSortDir==='asc'?'↑':spendSortDir==='desc'?'↓':'↕';
+    return `<th style="cursor:pointer;user-select:none;" onclick="spendSort('${col}')">${label} <span style="opacity:${isActive?1:0.4};font-size:0.7rem;">${arrow}</span></th>`;
+  }
+
   wrap.innerHTML = `<table class="data-table"><thead><tr>
-    <th>Item</th><th>Qty</th><th>Harga</th><th>Tanggal</th><th>Kategori</th><th>Oleh</th><th>Actions</th>
-  </tr></thead><tbody>${items.map(i => `<tr>
-    <td><strong>${esc(i.desc)}</strong></td>
-    <td style="font-family:'DM Mono',monospace;font-size:0.8rem;">${esc(i.qty||'')} ${esc(i.unit||'')}</td>
-    <td class="spending-amount text-accent">${formatIDR(i.amount)}</td>
-    <td>${i.date}</td><td><span class="badge badge-purple">${esc(i.category)}</span></td>
-    <td>${esc(i.addedBy||'')}</td>
-    <td>
-      <button class="btn btn-ghost btn-sm" onclick="openSpendingEdit('${i.id}')">✏ Edit</button>
-      <button class="btn btn-danger btn-sm" onclick="deleteRow('spending','spending','${i.id}')">✕</button>
-    </td>
-  </tr>`).join('')}</tbody></table>`;
+    ${sortTh('desc','Item')}
+    <th>Type</th>
+    <th>Qty</th>
+    ${sortTh('amount','Price')}
+    ${sortTh('date','Date')}
+    ${sortTh('category','Category')}
+    <th>By</th>
+    <th>Actions</th>
+  </tr></thead><tbody>${items.map(i => {
+    const isTO = (i.itemType||'grocery')==='takeout';
+    const typeBadge = isTO
+      ? `<span class="badge badge-orange">🥡 Takeout</span>`
+      : `<span class="badge badge-green">🛒 Grocery</span>`;
+    return `<tr>
+      <td><strong>${esc(i.desc)}</strong>${i.calPerServing?`<div style="font-size:0.68rem;color:var(--text3);font-family:'DM Mono',monospace;">${i.calPerServing} kcal/serving</div>`:''}
+      </td>
+      <td>${typeBadge}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:0.8rem;">${esc(String(i.qty||''))} ${esc(i.unit||'')}</td>
+      <td class="spending-amount text-accent">${formatIDR(i.amount)}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:0.75rem;">${i.date||'—'}</td>
+      <td><span class="badge badge-purple">${esc(i.category||'')}</span></td>
+      <td style="font-size:0.75rem;color:var(--text2);">${esc(i.addedBy||'')}</td>
+      <td style="white-space:nowrap;">
+        <button class="btn btn-ghost btn-sm" onclick="openSpendingEdit('${i.id}')">✏</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteRow('spending','spending','${i.id}')">✕</button>
+      </td>
+    </tr>`;
+  }).join('')}</tbody></table>`;
+}
+
+function spendSort(col) {
+  if (spendSortCol !== col) { spendSortCol = col; spendSortDir = 'desc'; }
+  else { spendSortDir = spendSortDir==='desc'?'asc':spendSortDir==='asc'?'reset':'desc'; }
+  renderSpending();
 }
 
 // ============================================================
@@ -3417,7 +4219,7 @@ function renderDashboard() {
     let streak=0, longest=0, curRun=0;
     const mealDates=new Set((db.meals||[]).filter(m=>m.datetime).map(m=>localDateStr(new Date(m.datetime),tzOffset)));
     let cd=realToday;
-    while(mealDates.has(cd)){streak++;const dt=new Date(cd);dt.setDate(dt.getDate()-1);cd=dt.toISOString().split('T')[0];}
+    while(mealDates.has(cd)){streak++;const [sy,sm,sd]=cd.split('-').map(Number);const dt=new Date(Date.UTC(sy,sm-1,sd));dt.setUTCDate(dt.getUTCDate()-1);cd=dt.toISOString().split('T')[0];}
     const sorted=[...mealDates].sort();
     sorted.forEach((d,i)=>{
       if(i===0){curRun=1;}else{const p=new Date(sorted[i-1]);p.setDate(p.getDate()+1);curRun=p.toISOString().split('T')[0]===d?curRun+1:1;}
@@ -4137,9 +4939,9 @@ let mpWeekStart = null; // Monday of current viewed week
 
 const MP_MEAL_TYPES = [
   { key: 'breakfast',       label: 'Breakfast',      emoji: '🌅' },
-  { key: 'morning-snack',   label: 'Snack',          emoji: '🍎' },
+  { key: 'morning-snack',   label: 'AM Snack',       emoji: '🍎' },
   { key: 'lunch',           label: 'Lunch',          emoji: '🍱' },
-  { key: 'afternoon-snack', label: 'Snack',          emoji: '🧃' },
+  { key: 'afternoon-snack', label: 'PM Snack',       emoji: '🧃' },
   { key: 'dinner',          label: 'Dinner',         emoji: '🌙' },
 ];
 
